@@ -1,5 +1,5 @@
-# 
-# Makefile.lib 
+#
+# Makefile.lib
 #
 # version   : 3.2.0
 # copyright : 2002 - 2018 by Alper Akcan
@@ -43,14 +43,15 @@
 #   20180204 - seemless qt .moc, .ui support
 #   20180228 - rename distdir to dist.dir
 #   20180718 - fix @.cmd
+#   20180719 - fix whitespace and add some more -W to CFLAGS.
 
 #
 # Example
 # -------
-# 
+#
 #     target-y  = target1
 #     target-y += target2
-# 
+#
 #     target1_files-y = target_file_shared.c \
 #                       target1_file_2.c \
 #                       target1_file_3.c
@@ -61,7 +62,7 @@
 #     target1_cflags-y = -DUSER_DEFINED \
 #                        -O2
 #     target1_ldflags-y = -luserdefined
-# 
+#
 #     target2_files-y = target_file_shared.c \
 #                       target2_file_2.c \
 #                       target2_file_3.c
@@ -76,30 +77,30 @@
 #     dist.dir = dist
 #
 #     dist.bin = target1
-# 
+#
 #     include Makefile.lib
 #
 
 #
 # Overview
 # --------
-# 
+#
 # you can have more than one target, just add targets as you wish. you can
 # share files among targets, files will be compiled for each target with
 # approtiate flags.
-# 
+#
 # in addition targets may depend each other, so if your target depends on
 # target.so just add target.so to target's depend list with;
-# 
+#
 #    ${target}_depends-y = target.so
-# 
+#
 # targets may also depend to the subdirectories, so target commands will
 # not be executed until subdirs commands get executed.
-# 
+#
 # some usefull files are created in make process, for debugging and for speedup
-# 
-#     .target/*.d              : includes depend information for the file
-#     .target/*.d.cmd          : the command used for generating .d file
+#
+#     .target/*.d                : includes depend information for the file
+#     .target/*.d.cmd            : the command used for generating .d file
 #     .target/*.o                : object for the file
 #     .target/*.o.cmd            : the command used for creating the object
 #     .target/target[a,so,o]     : the target
@@ -110,16 +111,16 @@
 #
 # Available Targets
 # -----------------
-# 
-#     target-[y,n, ]    : a binary target.
-#                         target will be created with $(CC) -o
-#     target.o-[y,n, ]  : an object target.
-#                         target.o will be created with $(LD) -r -o
-#     target.a-[y,n, ]  : a static library target.
-#                         target.a will be created with $(AR)
-#     target.so-[y,n, ] : a shared library target.
-#                         target.so will be created with $(CC) -o -shared
-# 
+#
+#     target-[y,n, ]         : a binary target.
+#                              target will be created with $(CC) -o
+#     target.o-[y,n, ]       : an object target.
+#                              target.o will be created with $(LD) -r -o
+#     target.a-[y,n, ]       : a static library target.
+#                              target.a will be created with $(AR)
+#     target.so-[y,n, ]      : a shared library target.
+#                              target.so will be created with $(CC) -o -shared
+#
 #     target.host-[y,n, ]    : a binary target.
 #                              target will be created with $(HOSTCC) -o
 #     target.o.host-[y,n, ]  : an object target.
@@ -128,15 +129,15 @@
 #                              target.a will be created with $(HOSTAR)
 #     target.so.host-[y,n, ] : a shared library target.
 #                              target.so will be created with $(HOSTCC) -o -shared
-# 
-#     subdir-[y,n, ] : subdirectory targets are executed with
-#                      $(subdir-y)_makeflags-y $(MAKE) -C $(subdir-y)
+#
+#     subdir-[y,n, ]         : subdirectory targets are executed with
+#                              $(subdir-y)_makeflags-y $(MAKE) -C $(subdir-y)
 #
 
 #
 # Available Target Flags
 # ----------------------
-# 
+#
 #    $(target)_makeflags-[y,n, ]        : makeflags for target  will be passed to make
 #                                         command only for corresponding target.
 #    $(target)_files-[y,n, ]            : files must match *.[cho] pattern. *.[ch] files
@@ -169,7 +170,7 @@
 # Distribution Commands
 # ---------------------
 #
-#    dist.dir                            : distribution folder
+#    dist.dir                           : distribution folder
 #
 #    dist.obj-[y,n ]                    : files to be copied under $(dist.dir)/obj directory
 #    dist.lib-[y,n ]                    : files to be copied under $(dist.dir)/lib directory
@@ -206,49 +207,48 @@ MV         := mv
 RM         := rm -rf
 MKDIR      := mkdir -p
 
-override CFLAGS += -Wall -Wextra -Werror -pipe -g3 -O2 -fsigned-char -fno-strict-aliasing -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
-# -fvisibility=hidden
-
+override CFLAGS += -Wall -Wextra -Werror -Wswitch-enum -pipe -g3 -O2 -fPIC -fsigned-char -fno-strict-aliasing -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
+#override CFLAGS += -Wshadow -fvisibility=hidden
 #override CFLAGS += -fno-math-errno -fno-trapping-math
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 TARGET_MACHINE := $(subst -, ,$(shell $(CC) -dumpmachine))
 
 ifneq ($(findstring mingw, $(TARGET_MACHINE)),)
-TARGET_OS := WINDOWS
+    TARGET_OS := WINDOWS
 else ifneq ($(findstring apple, $(TARGET_MACHINE)),)
-TARGET_OS := MACOS
+    TARGET_OS := MACOS
 else ifneq ($(findstring linux, $(TARGET_MACHINE)),)
-TARGET_OS := LINUX
+    TARGET_OS := LINUX
 else
-TARGET_OS := UNKNOWN
+    TARGET_OS := UNKNOWN
 endif
 
 ifeq      ($(TARGET_OS),WINDOWS)
 else ifeq ($(TARGET_OS),MACOS)
-	override __DARWIN__  = y
-	override MFLAGS     += __DARWIN__=y
-	override CFLAGS     += -D__DARWIN__=1
-	override CFLAGS     += -I/opt/local/include
-	override CFLAGS     += -fPIC
-#	override CFLAGS     += -fassociative-math -fno-signed-zeros
-	override CXXFLAGS   += $(CFLAGS)
-	override LDOPTS     += -keep_private_externs
+    override __DARWIN__  = y
+    override MFLAGS     += __DARWIN__=y
+    override CFLAGS     += -D__DARWIN__=1
+    override CFLAGS     += -I/opt/local/include
+    override CFLAGS     += -fPIC
+    #override CFLAGS     += -fassociative-math -fno-signed-zeros
+    override CXXFLAGS   += $(CFLAGS)
+    override LDOPTS     += -keep_private_externs
 else ifeq ($(TARGET_OS),LINUX)
-	override __LINUX__  = y
-	override MFLAGS    += __LINUX__=y
-	override CFLAGS    += -D__LINUX__=1 -fPIC
-#	override CFLAGS    += -fassociative-math -fno-signed-zeros -fPIC
-	override CXXFLAGS   += $(CFLAGS)
+    override __LINUX__  = y
+    override MFLAGS    += __LINUX__=y
+    override CFLAGS    += -D__LINUX__=1 -fPIC
+    #override CFLAGS    += -fassociative-math -fno-signed-zeros -fPIC
+    override CXXFLAGS   += $(CFLAGS)
 endif
 
-MAKE       := + CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" TOPDIR='$(TOPDIR)' uname_S=$(uname_S) TARGET_OS=$(TARGET_OS) $(MAKE) $(MFLAGS) --no-print-directory
+MAKE := + CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" TOPDIR='$(TOPDIR)' uname_S=$(uname_S) TARGET_OS=$(TARGET_OS) $(MAKE) $(MFLAGS) --no-print-directory
 
 all:
 
 ifneq ($(V)$(VERBOSE),)
     verbose := ver
-    Q = 
+    Q =
 else
     verbose := pur
     Q = @
@@ -418,29 +418,29 @@ disp_distclean        = $($(verbose)_disp_distclean)
 #
 # _CMD
 #
-_cmd_depend.c       = $(CC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
-                      $(CP) $$@ $$@.p; \
-                      $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
-                      $(MV) $$@.p $$@
-_cmd_compile.c      = $(CC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
-_cmd_link.c         = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $(LDFLAGS)
-_cmd_link_so.c      = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
+_cmd_depend.c         = $(CC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+                        $(CP) $$@ $$@.p; \
+                        $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
+                        $(MV) $$@.p $$@
+_cmd_compile.c        = $(CC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
+_cmd_link.c           = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $(LDFLAGS)
+_cmd_link_so.c        = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
 
-_cmd_depend.c.host  = $(HOSTCC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
-                      $(CP) $$@ $$@.p; \
-                      $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
-                      $(MV) $$@.p $$@
-_cmd_compile.c.host = $(HOSTCC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
-_cmd_link.c.host    = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $(LDFLAGS)
-_cmd_link_so.c.host = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
+_cmd_depend.c.host    = $(HOSTCC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+                        $(CP) $$@ $$@.p; \
+                        $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
+                        $(MV) $$@.p $$@
+_cmd_compile.c.host   = $(HOSTCC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
+_cmd_link.c.host      = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $(LDFLAGS)
+_cmd_link_so.c.host   = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
 
 _cmd_depend.cxx       = $(CXX) $(CXXFLAGS) $($1_cxxflags) \
                         $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
@@ -647,11 +647,10 @@ define target-defaults_base
     $(eval $1_includes     = -iquote ./)
     $(eval $1_includes    += $(addprefix -I, $($1_includes-y)))
     $(eval $1_libraries    = $(addprefix -L, ./ $($1_libraries-y)))
-    $(eval $1_libraries   += $(addprefix -Wl$(comma)-rpath , ./ $($1_libraries-y)))
     $(eval $1_ldflags      = $($1_ldflags-y))
-    
+
     $(eval $1_headers_uic  = $(patsubst %.ui,.$1/%-ui.h,$(subst ../,__UPDIR__/,$($1_sources_uic))))
-    
+
     $(eval $1_depends_c    = $(subst ../,__UPDIR__/,$($1_depends_c)))
     $(eval $1_objects_c    = $(subst ../,__UPDIR__/,$($1_objects_c)))
 
@@ -730,15 +729,15 @@ define target-defaults
 
     $(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx)))))
     $(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx)))))
-    
+
     $(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx)))))
     $(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx)))))
-    
+
     $(eval $(foreach F,$($1_headers_uic), $(eval $(call target-defaults-rule,$1,$F,.$1/%-ui.h,%.ui,$(do_uic.qt)))))
     $(eval $(foreach F,$($1_sources_moc), $(eval $(call target-defaults-rule,$1,$(patsubst %.moc,.$1/%-moc.cpp,$F),.$1/%-moc.cpp,%.h,$(do_moc.qt)))))
     $(eval $(foreach F,$($1_depends_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,.$1/%.cpp,$(do_depend.cxx)))))
     $(eval $(foreach F,$($1_objects_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,.$1/%.cpp,$(do_compile.cxx)))))
-    
+
     $(eval $(foreach F,$($1_depends_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.d,%.m,$(do_depend.m)))))
     $(eval $(foreach F,$($1_objects_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.o,%.m,$(do_compile.m)))))
 endef
@@ -751,15 +750,15 @@ define target.host-defaults
 
     $(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx.host)))))
     $(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx.host)))))
-    
+
     $(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx.host)))))
     $(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx.host)))))
-    
+
     $(eval $(foreach F,$($1_headers_uic), $(eval $(call target-defaults-rule,$1,$F,.$1/%-ui.h,%.ui,$(do_uic.qt)))))
     $(eval $(foreach F,$($1_sources_moc), $(eval $(call target-defaults-rule,$1,$(patsubst %.moc,.$1/%-moc.cpp,$F),.$1/%-moc.cpp,%.h,$(do_moc.qt)))))
     $(eval $(foreach F,$($1_depends_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,.$1/%.cpp,$(do_depend.cxx.host)))))
     $(eval $(foreach F,$($1_objects_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,.$1/%.cpp,$(do_compile.cxx.host)))))
-    
+
     $(eval $(foreach F,$($1_depends_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.d,%.m,$(do_depend.m.host)))))
     $(eval $(foreach F,$($1_objects_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.o,%.m,$(do_compile.m.host)))))
 endef
@@ -777,7 +776,7 @@ endef
 
 define target.host-variables
     $(eval $(call target.host-defaults,$1,$2))
-    
+
     .$1/$1:
 	$(do_link.c.host)
 endef
@@ -825,14 +824,14 @@ endef
 
 define target.o.host-variables
     $(eval $(call target.host-defaults,$1,$2))
-    
+
     .$1/$1:
 	$(do_ld.host)
 endef
 
 define target_empty-defaults
     targets-empty += $1
-    
+
     $(addsuffix _clean, $1): __FORCE
 	$(do_clean) $1 .$1 $$@.cmd
 endef
@@ -844,7 +843,7 @@ endef
 
 define subdir-defaults
     subdirs += $1
-    
+
     $1: $1_all
 
     $(addsuffix _all, $1): $($1_depends-y) __FORCE
@@ -855,7 +854,6 @@ define subdir-defaults
 
     $(addsuffix _clean, $1): __FORCE
 	@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _clean,,$$@)' clean
-
 endef
 
 define dist-defaults
@@ -943,13 +941,11 @@ $(eval $(foreach S,$(subdir-),$(eval $(call subdir_empty-defaults,$S,clean))))
 # distributin tags
 
 ifneq ($(dist.dir),)
-
 $(eval $(foreach D,$(dist.bin-y), $(eval $(call dist.bin-variables,$D))))
 $(eval $(foreach D,$(dist.lib-y), $(eval $(call dist.lib-variables,$D))))
 $(eval $(foreach D,$(dist.obj-y), $(eval $(call dist.obj-variables,$D))))
 $(eval $(foreach D,$(dist.include-y), $(eval $(call dist.include-variables,$D))))
 $(eval $(foreach D,$(dist.share-y), $(eval $(call dist.share-variables,$D))))
-
 endif
 
 # generic tags
