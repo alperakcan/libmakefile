@@ -1,5 +1,5 @@
-# 
-# Makefile.lib 
+#
+# Makefile.lib
 #
 # version   : 3.2.0
 # copyright : 2002 - 2018 by Alper Akcan
@@ -43,14 +43,15 @@
 #   20180204 - seemless qt .moc, .ui support
 #   20180228 - rename distdir to dist.dir
 #   20180718 - fix @.cmd
+#   20180719 - fix whitespace and add some more -W to CFLAGS.
 
 #
 # Example
 # -------
-# 
+#
 #     target-y  = target1
 #     target-y += target2
-# 
+#
 #     target1_files-y = target_file_shared.c \
 #                       target1_file_2.c \
 #                       target1_file_3.c
@@ -61,7 +62,7 @@
 #     target1_cflags-y = -DUSER_DEFINED \
 #                        -O2
 #     target1_ldflags-y = -luserdefined
-# 
+#
 #     target2_files-y = target_file_shared.c \
 #                       target2_file_2.c \
 #                       target2_file_3.c
@@ -76,28 +77,28 @@
 #     dist.dir = dist
 #
 #     dist.bin = target1
-# 
+#
 #     include Makefile.lib
 #
 
 #
 # Overview
 # --------
-# 
+#
 # you can have more than one target, just add targets as you wish. you can
 # share files among targets, files will be compiled for each target with
 # approtiate flags.
-# 
+#
 # in addition targets may depend each other, so if your target depends on
 # target.so just add target.so to target's depend list with;
-# 
+#
 #    ${target}_depends-y = target.so
-# 
+#
 # targets may also depend to the subdirectories, so target commands will
 # not be executed until subdirs commands get executed.
-# 
+#
 # some usefull files are created in make process, for debugging and for speedup
-# 
+#
 #     .target/*.d              : includes depend information for the file
 #     .target/*.d.cmd          : the command used for generating .d file
 #     .target/*.o                : object for the file
@@ -110,7 +111,7 @@
 #
 # Available Targets
 # -----------------
-# 
+#
 #     target-[y,n, ]    : a binary target.
 #                         target will be created with $(CC) -o
 #     target.o-[y,n, ]  : an object target.
@@ -119,7 +120,7 @@
 #                         target.a will be created with $(AR)
 #     target.so-[y,n, ] : a shared library target.
 #                         target.so will be created with $(CC) -o -shared
-# 
+#
 #     target.host-[y,n, ]    : a binary target.
 #                              target will be created with $(HOSTCC) -o
 #     target.o.host-[y,n, ]  : an object target.
@@ -128,7 +129,7 @@
 #                              target.a will be created with $(HOSTAR)
 #     target.so.host-[y,n, ] : a shared library target.
 #                              target.so will be created with $(HOSTCC) -o -shared
-# 
+#
 #     subdir-[y,n, ] : subdirectory targets are executed with
 #                      $(subdir-y)_makeflags-y $(MAKE) -C $(subdir-y)
 #
@@ -136,7 +137,7 @@
 #
 # Available Target Flags
 # ----------------------
-# 
+#
 #    $(target)_makeflags-[y,n, ]        : makeflags for target  will be passed to make
 #                                         command only for corresponding target.
 #    $(target)_files-[y,n, ]            : files must match *.[cho] pattern. *.[ch] files
@@ -206,10 +207,8 @@ MV         := mv
 RM         := rm -rf
 MKDIR      := mkdir -p
 
-override CFLAGS += -Wall -Wextra -Werror -pipe -g3 -O2 -fsigned-char -fno-strict-aliasing -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
+override CFLAGS += -Wall -Wextra -Werror -Wshadow -Wswitch-enum -pipe -g3 -O2 -fPIC -fsigned-char -fno-strict-aliasing -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE
 # -fvisibility=hidden
-
-#override CFLAGS += -fno-math-errno -fno-trapping-math
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 TARGET_MACHINE := $(subst -, ,$(shell $(CC) -dumpmachine))
@@ -242,16 +241,16 @@ else ifeq ($(TARGET_OS),LINUX)
 	override CXXFLAGS   += $(CFLAGS)
 endif
 
-MAKE       := + CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" TOPDIR='$(TOPDIR)' uname_S=$(uname_S) TARGET_OS=$(TARGET_OS) $(MAKE) $(MFLAGS) --no-print-directory
+MAKE := + CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" TOPDIR='$(TOPDIR)' uname_S=$(uname_S) TARGET_OS=$(TARGET_OS) $(MAKE) $(MFLAGS) --no-print-directory
 
 all:
 
 ifneq ($(V)$(VERBOSE),)
-    verbose := ver
-    Q = 
+	verbose := ver
+	Q =
 else
-    verbose := pur
-    Q = @
+	verbose := pur
+	Q = @
 endif
 
 pur_objects = $(CURDIR)/$$@
@@ -418,29 +417,29 @@ disp_distclean        = $($(verbose)_disp_distclean)
 #
 # _CMD
 #
-_cmd_depend.c       = $(CC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
-                      $(CP) $$@ $$@.p; \
-                      $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
-                      $(MV) $$@.p $$@
-_cmd_compile.c      = $(CC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
-_cmd_link.c         = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $(LDFLAGS)
-_cmd_link_so.c      = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
+_cmd_depend.c         = $(CC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+                        $(CP) $$@ $$@.p; \
+                        $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
+                        $(MV) $$@.p $$@
+_cmd_compile.c        = $(CC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
+_cmd_link.c           = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $(LDFLAGS)
+_cmd_link_so.c        = $(CC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
 
-_cmd_depend.c.host  = $(HOSTCC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
-                      $(CP) $$@ $$@.p; \
-                      $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
-                      $(MV) $$@.p $$@
-_cmd_compile.c.host = $(HOSTCC) $(CFLAGS) $($1_cflags) \
-                      $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
-_cmd_link.c.host    = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $(LDFLAGS)
-_cmd_link_so.c.host = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
-                      $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
+_cmd_depend.c.host    = $(HOSTCC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+                        $(CP) $$@ $$@.p; \
+                        $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
+                        $(MV) $$@.p $$@
+_cmd_compile.c.host   = $(HOSTCC) $(CFLAGS) $($1_cflags) \
+                        $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
+_cmd_link.c.host      = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $(LDFLAGS)
+_cmd_link_so.c.host   = $(HOSTCC) $(CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                        $($1_ldflags) $$(filter-out -static,$(LDFLAGS)) -shared
 
 _cmd_depend.cxx       = $(CXX) $(CXXFLAGS) $($1_cxxflags) \
                         $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
@@ -618,282 +617,281 @@ do_distclean        = @$(disp_distclean)        ; $(cmd_distclean)
 #
 
 define target-defaults_base
-    $(eval comma           = ,)
-    $(eval $1_sources_c    = $(filter %.c,$2))
-    $(eval $1_headers_c    = $(filter %.h,$2))
-    $(eval $1_sources_cc   = $(filter %.cc,$2))
-    $(eval $1_sources_cpp  = $(filter %.cpp,$2))
-    $(eval $1_headers_cxx  = $(filter %.hh,$2))
-    $(eval $1_headers_cxx += $(filter %.hpp,$2))
-    $(eval $1_sources_moc  = $(filter %.moc,$2))
-    $(eval $1_sources_uic  = $(filter %.ui,$2))
-    $(eval $1_sources_m    = $(filter %.m,$2))
-    $(eval $1_headers_m    = $(filter %.h,$2))
-    $(eval $1_objects_c    = $(addprefix .$1/, $(subst .c,.c.o,$($1_sources_c))))
-    $(eval $1_objects_cc   = $(addprefix .$1/, $(subst .cc,.cc.o,$($1_sources_cc))))
-    $(eval $1_objects_cpp  = $(addprefix .$1/, $(subst .cpp,.cpp.o,$($1_sources_cpp))))
-    $(eval $1_objects_moc  = $(addprefix .$1/, $(subst .moc,-moc.cpp.o,$($1_sources_moc))))
-    $(eval $1_objects_m    = $(addprefix .$1/, $(subst .m,.m.o,$($1_sources_m))))
-    $(eval $1_objects_e    = $(subst ",,$(filter %.o,$2)))
-    $(eval $1_objects_e   += $(subst ",,$(filter %.a,$2)))
-    $(eval $1_objects_e   += $(subst ",,$(filter %.lib,$2)))
-    $(eval $1_depends_c    = $(addprefix .$1/, $(subst .c,.c.d,$($1_sources_c))))
-    $(eval $1_depends_cc   = $(addprefix .$1/, $(subst .cc,.cc.d,$($1_sources_cc))))
-    $(eval $1_depends_cpp  = $(addprefix .$1/, $(subst .cpp,.cpp.d,$($1_sources_cpp))))
-    $(eval $1_depends_moc  = $(addprefix .$1/, $(subst .moc,-moc.cpp.d,$($1_sources_moc))))
-    $(eval $1_depends_m    = $(addprefix .$1/, $(subst .m,.m.d,$($1_sources_m))))
-    $(eval $1_cflags       = $($1_cflags-y))
-    $(eval $1_cxxflags     = $($1_cxxflags-y))
-    $(eval $1_includes     = -iquote ./)
-    $(eval $1_includes    += $(addprefix -I, $($1_includes-y)))
-    $(eval $1_libraries    = $(addprefix -L, ./ $($1_libraries-y)))
-    $(eval $1_libraries   += $(addprefix -Wl$(comma)-rpath , ./ $($1_libraries-y)))
-    $(eval $1_ldflags      = $($1_ldflags-y))
-    
-    $(eval $1_headers_uic  = $(patsubst %.ui,.$1/%-ui.h,$(subst ../,__UPDIR__/,$($1_sources_uic))))
-    
-    $(eval $1_depends_c    = $(subst ../,__UPDIR__/,$($1_depends_c)))
-    $(eval $1_objects_c    = $(subst ../,__UPDIR__/,$($1_objects_c)))
+	$(eval comma           = ,)
+	$(eval $1_sources_c    = $(filter %.c,$2))
+	$(eval $1_headers_c    = $(filter %.h,$2))
+	$(eval $1_sources_cc   = $(filter %.cc,$2))
+	$(eval $1_sources_cpp  = $(filter %.cpp,$2))
+	$(eval $1_headers_cxx  = $(filter %.hh,$2))
+	$(eval $1_headers_cxx += $(filter %.hpp,$2))
+	$(eval $1_sources_moc  = $(filter %.moc,$2))
+	$(eval $1_sources_uic  = $(filter %.ui,$2))
+	$(eval $1_sources_m    = $(filter %.m,$2))
+	$(eval $1_headers_m    = $(filter %.h,$2))
+	$(eval $1_objects_c    = $(addprefix .$1/, $(subst .c,.c.o,$($1_sources_c))))
+	$(eval $1_objects_cc   = $(addprefix .$1/, $(subst .cc,.cc.o,$($1_sources_cc))))
+	$(eval $1_objects_cpp  = $(addprefix .$1/, $(subst .cpp,.cpp.o,$($1_sources_cpp))))
+	$(eval $1_objects_moc  = $(addprefix .$1/, $(subst .moc,-moc.cpp.o,$($1_sources_moc))))
+	$(eval $1_objects_m    = $(addprefix .$1/, $(subst .m,.m.o,$($1_sources_m))))
+	$(eval $1_objects_e    = $(subst ",,$(filter %.o,$2)))
+	$(eval $1_objects_e   += $(subst ",,$(filter %.a,$2)))
+	$(eval $1_objects_e   += $(subst ",,$(filter %.lib,$2)))
+	$(eval $1_depends_c    = $(addprefix .$1/, $(subst .c,.c.d,$($1_sources_c))))
+	$(eval $1_depends_cc   = $(addprefix .$1/, $(subst .cc,.cc.d,$($1_sources_cc))))
+	$(eval $1_depends_cpp  = $(addprefix .$1/, $(subst .cpp,.cpp.d,$($1_sources_cpp))))
+	$(eval $1_depends_moc  = $(addprefix .$1/, $(subst .moc,-moc.cpp.d,$($1_sources_moc))))
+	$(eval $1_depends_m    = $(addprefix .$1/, $(subst .m,.m.d,$($1_sources_m))))
+	$(eval $1_cflags       = $($1_cflags-y))
+	$(eval $1_cxxflags     = $($1_cxxflags-y))
+	$(eval $1_includes     = -iquote ./)
+	$(eval $1_includes    += $(addprefix -I, $($1_includes-y)))
+	$(eval $1_libraries    = $(addprefix -L, ./ $($1_libraries-y)))
+	$(eval $1_libraries   += $(addprefix -Wl$(comma)-rpath , ./ $($1_libraries-y)))
+	$(eval $1_ldflags      = $($1_ldflags-y))
 
-    $(eval $1_depends_cc   = $(subst ../,__UPDIR__/,$($1_depends_cc)))
-    $(eval $1_objects_cc   = $(subst ../,__UPDIR__/,$($1_objects_cc)))
+	$(eval $1_headers_uic  = $(patsubst %.ui,.$1/%-ui.h,$(subst ../,__UPDIR__/,$($1_sources_uic))))
 
-    $(eval $1_depends_cpp  = $(subst ../,__UPDIR__/,$($1_depends_cpp)))
-    $(eval $1_objects_cpp  = $(subst ../,__UPDIR__/,$($1_objects_cpp)))
+	$(eval $1_depends_c    = $(subst ../,__UPDIR__/,$($1_depends_c)))
+	$(eval $1_objects_c    = $(subst ../,__UPDIR__/,$($1_objects_c)))
 
-    $(eval $1_depends_moc  = $(subst ../,__UPDIR__/,$($1_depends_moc)))
-    $(eval $1_objects_moc  = $(subst ../,__UPDIR__/,$($1_objects_moc)))
+	$(eval $1_depends_cc   = $(subst ../,__UPDIR__/,$($1_depends_cc)))
+	$(eval $1_objects_cc   = $(subst ../,__UPDIR__/,$($1_objects_cc)))
 
-    $(eval $1_depends_m    = $(subst ../,__UPDIR__/,$($1_depends_m)))
-    $(eval $1_objects_m    = $(subst ../,__UPDIR__/,$($1_objects_m)))
+	$(eval $1_depends_cpp  = $(subst ../,__UPDIR__/,$($1_depends_cpp)))
+	$(eval $1_objects_cpp  = $(subst ../,__UPDIR__/,$($1_objects_cpp)))
 
-    $(eval $1_directories  = $(sort $(dir .$1/ $($1_objects_c) $($1_objects_cpp) $($1_objects_m) $($1_objects_moc))))
+	$(eval $1_depends_moc  = $(subst ../,__UPDIR__/,$($1_depends_moc)))
+	$(eval $1_objects_moc  = $(subst ../,__UPDIR__/,$($1_objects_moc)))
 
-    $(eval $1_depends      = $(MAKEFILE_LIST) $($1_depends_c) $($1_depends_cc) $($1_depends_cpp) $($1_depends_m) $($1_depends_moc))
-    $(eval $1_depends-y   += $($1_depends))
-    $(eval $1_depends-n   += $($1_headers_c))
-    $(eval $1_depends-n   += $($1_headers_m))
-    $(eval $1_depends-n   += $($1_headers_cxx))
-    $(eval $1_depends-y   += $($1_headers_uic))
+	$(eval $1_depends_m    = $(subst ../,__UPDIR__/,$($1_depends_m)))
+	$(eval $1_objects_m    = $(subst ../,__UPDIR__/,$($1_objects_m)))
 
-    $(eval target-builds  += $1)
-    $(eval target-objects += $($1_objects_c))
-    $(eval target-objects += $($1_objects_cc))
-    $(eval target-objects += $($1_objects_cpp))
-    $(eval target-objects += $($1_objects_moc))
-    $(eval target-objects += $($1_objects_m))
-    $(eval target-depends += $($1_depends_c))
-    $(eval target-depends += $($1_depends_cc))
-    $(eval target-depends += $($1_depends_cpp))
-    $(eval target-depends += $($1_depends_moc))
-    $(eval target-depends += $($1_depends_m))
-    $(eval target-cleans  += $1_clean)
+	$(eval $1_directories  = $(sort $(dir .$1/ $($1_objects_c) $($1_objects_cpp) $($1_objects_m) $($1_objects_moc))))
 
-    $($1_directories):
-	$(do_mkdir) $($1_directories)
+	$(eval $1_depends      = $(MAKEFILE_LIST) $($1_depends_c) $($1_depends_cc) $($1_depends_cpp) $($1_depends_m) $($1_depends_moc))
+	$(eval $1_depends-y   += $($1_depends))
+	$(eval $1_depends-n   += $($1_headers_c))
+	$(eval $1_depends-n   += $($1_headers_m))
+	$(eval $1_depends-n   += $($1_headers_cxx))
+	$(eval $1_depends-y   += $($1_headers_uic))
 
-    $($1_depends_c):   $($1_headers_c)
-    $($1_depends_cpp): $($1_headers_cxx)
-    $($1_depends_m):   $($1_headers_m)
+	$(eval target-builds  += $1)
+	$(eval target-objects += $($1_objects_c))
+	$(eval target-objects += $($1_objects_cc))
+	$(eval target-objects += $($1_objects_cpp))
+	$(eval target-objects += $($1_objects_moc))
+	$(eval target-objects += $($1_objects_m))
+	$(eval target-depends += $($1_depends_c))
+	$(eval target-depends += $($1_depends_cc))
+	$(eval target-depends += $($1_depends_cpp))
+	$(eval target-depends += $($1_depends_moc))
+	$(eval target-depends += $($1_depends_m))
+	$(eval target-cleans  += $1_clean)
 
-    $($1_objects_c):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
-    $($1_objects_cc):  .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
-    $($1_objects_cpp): .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
-    $($1_objects_moc): .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
-    $($1_objects_m):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
-    $($1_objects_e):   $(MAKEFILE_LIST)
+	$($1_directories):
+		$(do_mkdir) $($1_directories)
 
-    $(target-depends): $(filter-out $($1_depends), $($1_depends-y))
+	$($1_depends_c):   $($1_headers_c)
+	$($1_depends_cpp): $($1_headers_cxx)
+	$($1_depends_m):   $($1_headers_m)
 
-    $1: .$1/$1 $(MAKEFILE_LIST)
-	$(do_cp)
+	$($1_objects_c):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
+	$($1_objects_cc):  .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
+	$($1_objects_cpp): .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
+	$($1_objects_moc): .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
+	$($1_objects_m):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
+	$($1_objects_e):   $(MAKEFILE_LIST)
 
-    .$1/$1: $($1_depends-y) $($1_objects_c) $($1_objects_cc) $($1_objects_cpp) $($1_objects_moc) $($1_objects_m) $($1_objects_e)
+	$(target-depends): $(filter-out $($1_depends), $($1_depends-y))
 
-    $1_clean: __FORCE
-	$(do_clean) $1 .$1 $$@.cmd $1.dSYM $($1_headers_uic)
+	$1: .$1/$1 $(MAKEFILE_LIST)
+		$(do_cp)
 
-    $1_distclean: __FORCE
+	.$1/$1: $($1_depends-y) $($1_objects_c) $($1_objects_cc) $($1_objects_cpp) $($1_objects_moc) $($1_objects_m) $($1_objects_e)
+
+	$1_clean: __FORCE
+		$(do_clean) $1 .$1 $$@.cmd $1.dSYM $($1_headers_uic)
+
+	$1_distclean: __FORCE
 endef
 
 define target-defaults-rule
-    $(eval source = $(patsubst $3,$4,$(subst __UPDIR__/,../,$2)))
-    $2: ${source} $(MAKEFILE_LIST)
-	$5
+	$(eval source = $(patsubst $3,$4,$(subst __UPDIR__/,../,$2)))
+	$2: ${source} $(MAKEFILE_LIST)
+		$5
 endef
 
 define target-defaults
-    $(eval $(call target-defaults_base,$1,$2))
+	$(eval $(call target-defaults_base,$1,$2))
 
-    $(eval $(foreach F,$($1_depends_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.d,%.c,$(do_depend.c)))))
-    $(eval $(foreach F,$($1_objects_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.o,%.c,$(do_compile.c)))))
+	$(eval $(foreach F,$($1_depends_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.d,%.c,$(do_depend.c)))))
+	$(eval $(foreach F,$($1_objects_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.o,%.c,$(do_compile.c)))))
 
-    $(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx)))))
-    $(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx)))))
-    
-    $(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx)))))
-    $(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx)))))
-    
-    $(eval $(foreach F,$($1_headers_uic), $(eval $(call target-defaults-rule,$1,$F,.$1/%-ui.h,%.ui,$(do_uic.qt)))))
-    $(eval $(foreach F,$($1_sources_moc), $(eval $(call target-defaults-rule,$1,$(patsubst %.moc,.$1/%-moc.cpp,$F),.$1/%-moc.cpp,%.h,$(do_moc.qt)))))
-    $(eval $(foreach F,$($1_depends_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,.$1/%.cpp,$(do_depend.cxx)))))
-    $(eval $(foreach F,$($1_objects_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,.$1/%.cpp,$(do_compile.cxx)))))
-    
-    $(eval $(foreach F,$($1_depends_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.d,%.m,$(do_depend.m)))))
-    $(eval $(foreach F,$($1_objects_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.o,%.m,$(do_compile.m)))))
+	$(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx)))))
+	$(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx)))))
+
+	$(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx)))))
+	$(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx)))))
+
+	$(eval $(foreach F,$($1_headers_uic), $(eval $(call target-defaults-rule,$1,$F,.$1/%-ui.h,%.ui,$(do_uic.qt)))))
+	$(eval $(foreach F,$($1_sources_moc), $(eval $(call target-defaults-rule,$1,$(patsubst %.moc,.$1/%-moc.cpp,$F),.$1/%-moc.cpp,%.h,$(do_moc.qt)))))
+	$(eval $(foreach F,$($1_depends_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,.$1/%.cpp,$(do_depend.cxx)))))
+	$(eval $(foreach F,$($1_objects_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,.$1/%.cpp,$(do_compile.cxx)))))
+
+	$(eval $(foreach F,$($1_depends_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.d,%.m,$(do_depend.m)))))
+	$(eval $(foreach F,$($1_objects_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.o,%.m,$(do_compile.m)))))
 endef
 
 define target.host-defaults
-    $(eval $(call target-defaults_base,$1,$2))
+	$(eval $(call target-defaults_base,$1,$2))
 
-    $(eval $(foreach F,$($1_depends_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.d,%.c,$(do_depend.c.host)))))
-    $(eval $(foreach F,$($1_objects_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.o,%.c,$(do_compile.c.host)))))
+	$(eval $(foreach F,$($1_depends_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.d,%.c,$(do_depend.c.host)))))
+	$(eval $(foreach F,$($1_objects_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.o,%.c,$(do_compile.c.host)))))
 
-    $(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx.host)))))
-    $(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx.host)))))
-    
-    $(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx.host)))))
-    $(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx.host)))))
-    
-    $(eval $(foreach F,$($1_headers_uic), $(eval $(call target-defaults-rule,$1,$F,.$1/%-ui.h,%.ui,$(do_uic.qt)))))
-    $(eval $(foreach F,$($1_sources_moc), $(eval $(call target-defaults-rule,$1,$(patsubst %.moc,.$1/%-moc.cpp,$F),.$1/%-moc.cpp,%.h,$(do_moc.qt)))))
-    $(eval $(foreach F,$($1_depends_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,.$1/%.cpp,$(do_depend.cxx.host)))))
-    $(eval $(foreach F,$($1_objects_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,.$1/%.cpp,$(do_compile.cxx.host)))))
-    
-    $(eval $(foreach F,$($1_depends_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.d,%.m,$(do_depend.m.host)))))
-    $(eval $(foreach F,$($1_objects_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.o,%.m,$(do_compile.m.host)))))
+	$(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx.host)))))
+	$(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx.host)))))
+
+	$(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx.host)))))
+	$(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx.host)))))
+
+	$(eval $(foreach F,$($1_headers_uic), $(eval $(call target-defaults-rule,$1,$F,.$1/%-ui.h,%.ui,$(do_uic.qt)))))
+	$(eval $(foreach F,$($1_sources_moc), $(eval $(call target-defaults-rule,$1,$(patsubst %.moc,.$1/%-moc.cpp,$F),.$1/%-moc.cpp,%.h,$(do_moc.qt)))))
+	$(eval $(foreach F,$($1_depends_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,.$1/%.cpp,$(do_depend.cxx.host)))))
+	$(eval $(foreach F,$($1_objects_moc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,.$1/%.cpp,$(do_compile.cxx.host)))))
+
+	$(eval $(foreach F,$($1_depends_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.d,%.m,$(do_depend.m.host)))))
+	$(eval $(foreach F,$($1_objects_m), $(eval $(call target-defaults-rule,$1,$F,.$1/%.m.o,%.m,$(do_compile.m.host)))))
 endef
 
 define target-variables
-    $(eval $(call target-defaults,$1,$2))
+	$(eval $(call target-defaults,$1,$2))
 
-    .$1/$1:
+	.$1/$1:
 ifeq ($($1_sources_cpp),)
-	$(do_link.c)
+		$(do_link.c)
 else
-	$(do_link.cxx)
+		$(do_link.cxx)
 endif
 endef
 
 define target.host-variables
-    $(eval $(call target.host-defaults,$1,$2))
-    
-    .$1/$1:
-	$(do_link.c.host)
+	$(eval $(call target.host-defaults,$1,$2))
+
+	.$1/$1:
+		$(do_link.c.host)
 endef
 
 define target.so-variables
-    $(eval $(call target-defaults,$1,$2))
+	$(eval $(call target-defaults,$1,$2))
 
-    .$1/$1:
+	.$1/$1:
 ifeq ($($1_sources_cpp),)
-	$(do_link_so.c)
+		$(do_link_so.c)
 else
-	$(do_link_so.cxx)
+		$(do_link_so.cxx)
 endif
 endef
 
 define target.so.host-variables
-    $(eval $(call target.host-defaults,$1,$2))
+	$(eval $(call target.host-defaults,$1,$2))
 
-    .$1/$1:
-	$(do_link_so.c.host)
+	.$1/$1:
+		$(do_link_so.c.host)
 endef
 
 define target.a-variables
-    $(eval $(call target-defaults,$1,$2))
+	$(eval $(call target-defaults,$1,$2))
 
-    .$1/$1:
-	$(do_ar)
-	$(do_ranlib)
+	.$1/$1:
+		$(do_ar)
+		$(do_ranlib)
 endef
 
 define target.a.host-variables
-    $(eval $(call target.host-defaults,$1,$2))
+	$(eval $(call target.host-defaults,$1,$2))
 
-    .$1/$1:
-	$(do_ar.host)
-	$(do_ranlib.host)
+	.$1/$1:
+		$(do_ar.host)
+		$(do_ranlib.host)
 endef
 
 define target.o-variables
-    $(eval $(call target-defaults,$1,$2))
+	$(eval $(call target-defaults,$1,$2))
 
-    .$1/$1:
-	$(do_ld)
+	.$1/$1:
+		$(do_ld)
 endef
 
 define target.o.host-variables
-    $(eval $(call target.host-defaults,$1,$2))
-    
-    .$1/$1:
-	$(do_ld.host)
+	$(eval $(call target.host-defaults,$1,$2))
+
+	.$1/$1:
+		$(do_ld.host)
 endef
 
 define target_empty-defaults
-    targets-empty += $1
-    
-    $(addsuffix _clean, $1): __FORCE
-	$(do_clean) $1 .$1 $$@.cmd
+	targets-empty += $1
+
+	$(addsuffix _clean, $1): __FORCE
+		$(do_clean) $1 .$1 $$@.cmd
 endef
 
 define subdir_empty-defaults
-    $(addsuffix _$2, $1): __FORCE
-	@$($1_makeflags-y) $(MAKE) -C '$$(subst _$2,,$$@)' $2
+	$(addsuffix _$2, $1): __FORCE
+		@$($1_makeflags-y) $(MAKE) -C '$$(subst _$2,,$$@)' $2
 endef
 
 define subdir-defaults
-    subdirs += $1
-    
-    $1: $1_all
+	subdirs += $1
 
-    $(addsuffix _all, $1): $($1_depends-y) __FORCE
-	@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _all,,$$@)' all
+	$1: $1_all
 
-    $(addsuffix _build, $1): $($1_depends-y) __FORCE
-	@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _build,,$$@)' build
+	$(addsuffix _all, $1): $($1_depends-y) __FORCE
+		@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _all,,$$@)' all
 
-    $(addsuffix _clean, $1): __FORCE
-	@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _clean,,$$@)' clean
+	$(addsuffix _build, $1): $($1_depends-y) __FORCE
+		@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _build,,$$@)' build
 
+	$(addsuffix _clean, $1): __FORCE
+		@+ $($1_makeflags-y) $(MAKE) -C '$$(subst _clean,,$$@)' clean
 endef
 
 define dist-defaults
-    $(eval $1_dname          = $(dir $1))
-    $(eval $1_names          = $1)
-    $(eval $1_files          = $(subst $($1_dname), , $($1_names)))
-    $(eval $1_files          = $1)
-    $(eval target-cleans    += $1_distclean)
-    $(eval target-dists     += $(addprefix $(dist.dir)/$2/, $($1_files)))
+	$(eval $1_dname          = $(dir $1))
+	$(eval $1_names          = $1)
+	$(eval $1_files          = $(subst $($1_dname), , $($1_names)))
+	$(eval $1_files          = $1)
+	$(eval target-cleans    += $1_distclean)
+	$(eval target-dists     += $(addprefix $(dist.dir)/$2/, $($1_files)))
 
-    $(dist.dir)/$2: $(dist.dir)
+	$(dist.dir)/$2: $(dist.dir)
 
-    $(addprefix $(dist.dir)/$2/, $($1_files)): $1
-	$(do_dist)
+	$(addprefix $(dist.dir)/$2/, $($1_files)): $1
+		$(do_dist)
 
-    $1_distclean: __FORCE
-	$(do_distclean) $(addprefix $(dist.dir)/$2/, $($1_files))
-	$(Q)if [ -e '$$(abspath $(dist.dir))' ]; then find '$$(abspath $(dist.dir))' -depth -type d -empty -exec rm -rf {} \; ; fi
+	$1_distclean: __FORCE
+		$(do_distclean) $(addprefix $(dist.dir)/$2/, $($1_files))
+		$(Q)if [ -e '$$(abspath $(dist.dir))' ]; then find '$$(abspath $(dist.dir))' -depth -type d -empty -exec rm -rf {} \; ; fi
 endef
 
 define dist.share-variables
-    $(eval $(call dist-defaults,$1,share/${dist.base}))
+	$(eval $(call dist-defaults,$1,share/${dist.base}))
 endef
 
 define dist.include-variables
-    $(eval $(call dist-defaults,$1,include/${dist.base}))
+	$(eval $(call dist-defaults,$1,include/${dist.base}))
 endef
 
 define dist.obj-variables
-    $(eval $(call dist-defaults,$1,obj))
+	$(eval $(call dist-defaults,$1,obj))
 endef
 
 define dist.lib-variables
-    $(eval $(call dist-defaults,$1,lib))
+	$(eval $(call dist-defaults,$1,lib))
 endef
 
 define dist.bin-variables
-    $(eval $(call dist-defaults,$1,bin))
+	$(eval $(call dist-defaults,$1,bin))
 endef
 
 #
@@ -943,13 +941,11 @@ $(eval $(foreach S,$(subdir-),$(eval $(call subdir_empty-defaults,$S,clean))))
 # distributin tags
 
 ifneq ($(dist.dir),)
-
 $(eval $(foreach D,$(dist.bin-y), $(eval $(call dist.bin-variables,$D))))
 $(eval $(foreach D,$(dist.lib-y), $(eval $(call dist.lib-variables,$D))))
 $(eval $(foreach D,$(dist.obj-y), $(eval $(call dist.obj-variables,$D))))
 $(eval $(foreach D,$(dist.include-y), $(eval $(call dist.include-variables,$D))))
 $(eval $(foreach D,$(dist.share-y), $(eval $(call dist.share-variables,$D))))
-
 endif
 
 # generic tags
