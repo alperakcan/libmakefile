@@ -322,54 +322,54 @@ pur_disp_distclean        = echo "  DISTCLEAN  $$(subst _distclean,,$(pur_object
 #
 # VER
 #
-ver_disp_depend.c         = echo "$(subst ",\",$(cmd_depend.c))"
-ver_disp_compile.c        = echo "$(subst ",\",$(cmd_compile.c))"
-ver_disp_link.c           = echo "$(subst ",\",$(cmd_link.c))"
-ver_disp_link_so.c        = echo "$(subst ",\",$(cmd_link_so.c))"
+ver_disp_depend.c         = echo "$(subst ",\",$(_cmd_depend.c))"
+ver_disp_compile.c        = echo "$(subst ",\",$(_cmd_compile.c))"
+ver_disp_link.c           = echo "$(subst ",\",$(_cmd_link.c))"
+ver_disp_link_so.c        = echo "$(subst ",\",$(_cmd_link_so.c))"
 
-ver_disp_depend.cxx       = echo "$(subst ",\",$(cmd_depend.cxx))"
-ver_disp_compile.cxx      = echo "$(subst ",\",$(cmd_compile.cxx))"
-ver_disp_link.cxx         = echo "$(subst ",\",$(cmd_link.cxx))"
-ver_disp_link_so.cxx      = echo "$(subst ",\",$(cmd_link_so.cxx))"
+ver_disp_depend.cxx       = echo "$(subst ",\",$(_cmd_depend.cxx))"
+ver_disp_compile.cxx      = echo "$(subst ",\",$(_cmd_compile.cxx))"
+ver_disp_link.cxx         = echo "$(subst ",\",$(_cmd_link.cxx))"
+ver_disp_link_so.cxx      = echo "$(subst ",\",$(_cmd_link_so.cxx))"
 
-ver_disp_moc.qt           = echo "$(subst ",\",$(cmd_moc.qt))"
-ver_disp_uic.qt           = echo "$(subst ",\",$(cmd_uic.qt))"
+ver_disp_moc.qt           = echo "$(subst ",\",$(_cmd_moc.qt))"
+ver_disp_uic.qt           = echo "$(subst ",\",$(_cmd_uic.qt))"
 
-ver_disp_depend.m         = echo "$(subst ",\",$(cmd_depend.m))"
-ver_disp_compile.m        = echo "$(subst ",\",$(cmd_compile.m))"
-ver_disp_link.m           = echo "$(subst ",\",$(cmd_link.m))"
-ver_disp_link_so.m        = echo "$(subst ",\",$(cmd_link_so.m))"
+ver_disp_depend.m         = echo "$(subst ",\",$(_cmd_depend.m))"
+ver_disp_compile.m        = echo "$(subst ",\",$(_cmd_compile.m))"
+ver_disp_link.m           = echo "$(subst ",\",$(_cmd_link.m))"
+ver_disp_link_so.m        = echo "$(subst ",\",$(_cmd_link_so.m))"
 
-ver_disp_depend.c.host    = echo "$(subst ",\",$(cmd_depend.c.host))"
-ver_disp_compile.c.host   = echo "$(subst ",\",$(cmd_compile.c.host))"
-ver_disp_link.c.host      = echo "$(subst ",\",$(cmd_link.c.host))"
-ver_disp_link_so.c.host   = echo "$(subst ",\",$(cmd_link_so.c.host))"
+ver_disp_depend.c.host    = echo "$(subst ",\",$(_cmd_depend.c.host))"
+ver_disp_compile.c.host   = echo "$(subst ",\",$(_cmd_compile.c.host))"
+ver_disp_link.c.host      = echo "$(subst ",\",$(_cmd_link.c.host))"
+ver_disp_link_so.c.host   = echo "$(subst ",\",$(_cmd_link_so.c.host))"
 
-ver_disp_depend.cxx.host  = echo "$(subst ",\",$(cmd_depend.cxx.host))"
-ver_disp_compile.cxx.host = echo "$(subst ",\",$(cmd_compile.cxx.host))"
-ver_disp_link.cxx.host    = echo "$(subst ",\",$(cmd_link.cxx.host))"
-ver_disp_link_so.cxx.host = echo "$(subst ",\",$(cmd_link_so.cxx.host))"
+ver_disp_depend.cxx.host  = echo "$(subst ",\",$(_cmd_depend.cxx.host))"
+ver_disp_compile.cxx.host = echo "$(subst ",\",$(_cmd_compile.cxx.host))"
+ver_disp_link.cxx.host    = echo "$(subst ",\",$(_cmd_link.cxx.host))"
+ver_disp_link_so.cxx.host = echo "$(subst ",\",$(_cmd_link_so.cxx.host))"
 
-ver_disp_moc.qt.host      = echo "$(subst ",\",$(cmd_moc.qt.host))"
-ver_disp_uic.qt.host      = echo "$(subst ",\",$(cmd_uic.qt.host))"
+ver_disp_moc.qt.host      = echo "$(subst ",\",$(_cmd_moc.qt.host))"
+ver_disp_uic.qt.host      = echo "$(subst ",\",$(_cmd_uic.qt.host))"
 
-ver_disp_depend.m.host    = echo "$(subst ",\",$(cmd_depend.m.host))"
-ver_disp_compile.m.host   = echo "$(subst ",\",$(cmd_compile.m.host))"
-ver_disp_link.m.host      = echo "$(subst ",\",$(cmd_link.m.host))"
-ver_disp_link_so.m.host   = echo "$(subst ",\",$(cmd_link_so.m.host))"
+ver_disp_depend.m.host    = echo "$(subst ",\",$(_cmd_depend.m.host))"
+ver_disp_compile.m.host   = echo "$(subst ",\",$(_cmd_compile.m.host))"
+ver_disp_link.m.host      = echo "$(subst ",\",$(_cmd_link.m.host))"
+ver_disp_link_so.m.host   = echo "$(subst ",\",$(_cmd_link_so.m.host))"
 
-ver_disp_ar               = echo "$(subst ",\",$(cmd_ar))"
-ver_disp_ranlib           = echo "$(subst ",\",$(cmd_ranlib))"
-ver_disp_ld               = echo "$(subst ",\",$(cmd_ld))"
+ver_disp_ar               = echo "$(subst ",\",$(_cmd_ar))"
+ver_disp_ranlib           = echo "$(subst ",\",$(_cmd_ranlib))"
+ver_disp_ld               = echo "$(subst ",\",$(_cmd_ld))"
 
-ver_disp_ld.host          = echo "$(subst ",\",$(cmd_ld.host))"
+ver_disp_ld.host          = echo "$(subst ",\",$(_cmd_ld.host))"
 
-ver_disp_cp               = echo "$(subst ",\",$(cmd_cp))"
-ver_disp_mkdir            = echo "$(subst ",\",$(cmd_mkdir))"
-ver_disp_clean            = echo "$(subst ",\",$(cmd_clean) $1 .$1 $$@.cmd)"
+ver_disp_cp               = echo "$(subst ",\",$(_cmd_cp))"
+ver_disp_mkdir            = echo "$(subst ",\",$(_cmd_mkdir))"
+ver_disp_clean            = echo "$(subst ",\",$(_cmd_clean) $1 .$1 $$@.cmd)"
 
-ver_disp_dist             = echo "$(subst ",\",$(cmd_dist))"
-ver_disp_distclean        = echo "$(subst ",\",$(cmd_distclean) $1 .$1 $$@.cmd)"
+ver_disp_dist             = echo "$(subst ",\",$(_cmd_dist))"
+ver_disp_distclean        = echo "$(subst ",\",$(_cmd_distclean) $1 .$1 $$@.cmd)"
 
 #
 # DISP
