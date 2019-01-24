@@ -249,8 +249,8 @@ __CXXFLAGS := $(CXXFLAGS) $(EXTRA_CXXFLAGS) $(__CFLAGS)
 __LDFLAGS  := $(LDFLAGS) $(EXTRA_LDFLAGS)
 
 MAKE := CFLAGS="$(CFLAGS)" EXTRA_CFLAGS="$(EXTRA_CFLAGS)" CXXFLAGS="$(CXXFLAGS)" EXTRA_CXXFLAGS="$(EXTRA_CXXFLAGS)" \
-	LDFLAGS="$(LDFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" TOPDIR='$(TOPDIR)' uname_S=$(uname_S) TARGET_OS=$(TARGET_OS) \
-	$(MAKE) $(MFLAGS) --no-print-directory
+        LDFLAGS="$(LDFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" TOPDIR='$(TOPDIR)' uname_S=$(uname_S) TARGET_OS=$(TARGET_OS) \
+        $(MAKE) $(MFLAGS)
 
 all:
 
@@ -260,6 +260,7 @@ ifneq ($(V)$(VERBOSE),)
 else
     verbose := pur
     Q = @
+    MAKE += --no-print-directory
 endif
 
 pur_objects = $(CURDIR)/$$@
