@@ -1,0 +1,435 @@
+#
+# Makefile.lib4c
+#
+# version   : 3.2.0
+# copyright : 2002 - 2018 by Alper Akcan
+# email     : alper.akcan@gmail.com
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+
+# Changelog :
+#
+#   20190125 - stripped down version of Makefile.lib for C
+
+#
+# Example
+# -------
+#
+#     target-y  = target1
+#     target-y += target2
+#
+#     target1_files-y = target_file_shared.c \
+#                       target1_file_2.c \
+#                       target1_file_3.c
+#     target1_includes-y = ./ \
+#                          /opt/include
+#     target1_libraries-y = ./ \
+#                           /opt/lib
+#     target1_cflags-y = -DUSER_DEFINED \
+#                        -O2
+#     target1_ldflags-y = -luserdefined
+#
+#     target2_files-y = target_file_shared.c \
+#                       target2_file_2.c \
+#                       target2_file_3.c
+#     target2_includes-y = ./ \
+#                          /opt/include
+#     target2_libraries-y = ./ \
+#                           /opt/lib
+#     target2_cflags-y = -DUSER_DEFINED \
+#                        -O2
+#     target2_ldflags-y = -luserdefined
+#
+#     include Makefile.lib
+#
+
+#
+# Overview
+# --------
+#
+# you can have more than one target, just add targets as you wish. you can
+# share files among targets, files will be compiled for each target with
+# approtiate flags.
+#
+# in addition targets may depend each other, so if your target depends on
+# target.so just add target.so to target's depend list with;
+#
+#    ${target}_depends-y = target.so
+#
+# targets may also depend to the subdirectories, so target commands will
+# not be executed until subdirs commands get executed.
+#
+# some usefull files are created in make process, for debugging and for speedup
+#
+#     .target/*.d                : includes depend information for the file
+#     .target/*.d.cmd            : the command used for generating .d file
+#     .target/*.o                : object for the file
+#     .target/*.o.cmd            : the command used for creating the object
+#     .target/target[a,so,o]     : the target
+#     .target/target[a,so,o].cmd : the command used for creating the target
+#     target                     : the target
+#
+
+#
+# Available Targets
+# -----------------
+#
+#     target-[y,n, ]         : a binary target.
+#                              target will be created with $(CC) -o
+#     target.o-[y,n, ]       : an object target.
+#                              target.o will be created with $(LD) -r -o
+#     target.a-[y,n, ]       : a static library target.
+#                              target.a will be created with $(AR)
+#     target.so-[y,n, ]      : a shared library target.
+#                              target.so will be created with $(CC) -o -shared
+#
+#     subdir-[y,n, ]         : subdirectory targets are executed with
+#                              $(subdir-y)_makeflags-y $(MAKE) -C $(subdir-y)
+#
+
+#
+# Available Target Flags
+# ----------------------
+#
+#    $(target)_makeflags-[y,n, ]        : makeflags for target  will be passed to make
+#                                         command only for corresponding target.
+#    $(target)_files-[y,n, ]            : files must match *.[cho] pattern. *.[ch] files
+#                                         will be exemined with $(CC) -M command to
+#                                         generate dependency files (*.d) files. *.[o]
+#                                         files will be used only in linking stage. all
+#                                         files generated with make command will be
+#                                         removed with $(RM) command.
+#    $(target)_cflags-[y,n, ]           : cflags will be added to global $(CFLAGS) for
+#                                         corresponding target only.
+#    $(target)_${file}_cflags-[y,n, ]   : cflags will be added to global $(CFLAGS) for
+#                                         corresponding target file only.
+#    $(target)_includes-[y,n, ]         : a '-I' will be added to all words in includes
+#                                         flag, and will be used only for corresponding
+#                                         target.
+#    $(target)_libraries-[y,n, ]        : a '-L' will be added to all words in libraries
+#                                         flag, and will be used only for corresponding
+#                                         target.
+#    $(target)_ldflags-[y,n, ]          : ldflags will be added to gloabal $(LDFLAGS) for
+#                                         corresponding target only.
+#    $(target)_depends-[y,n, ]          : all words in depends flag will be added to
+#                                         prerequisite's list.
+#
+
+TOPDIR ?= $(CURDIR)
+
+CC         := $(CROSS_COMPILE_PREFIX)gcc $(SYSROOT)
+LD         := $(CROSS_COMPILE_PREFIX)ld
+AR         := $(CROSS_COMPILE_PREFIX)ar
+RANLIB     := $(CROSS_COMPILE_PREFIX)ranlib
+STRIP      := $(CROSS_COMPILE_PREFIX)strip -sx
+OBJCOPY    := $(CROSS_COMPILE_PREFIX)objcopy
+
+SED        := sed
+
+CD         := cd
+CP         := cp -rf
+MV         := mv
+RM         := rm -rf
+MKDIR      := mkdir -p
+
+__CFLAGS := -Wall -Wextra -Werror -pipe -g3 -O2 -fsigned-char -fno-strict-aliasing -fPIC -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE $(CFLAGS) $(EXTRA_CFLAGS)
+#__CFLAGS += -Wswitch-enum -Wshadow
+#__CFLAGS += -fvisibility=hidden
+
+__LDFLAGS  := $(LDFLAGS) $(EXTRA_LDFLAGS)
+
+MAKE := CFLAGS="$(CFLAGS)" EXTRA_CFLAGS="$(EXTRA_CFLAGS)" LDFLAGS="$(LDFLAGS)" EXTRA_LDFLAGS="$(EXTRA_LDFLAGS)" TOPDIR='$(TOPDIR)' $(MAKE)
+
+all:
+
+ifneq ($(V)$(VERBOSE),)
+    verbose := ver
+    Q =
+else
+    verbose := pur
+    Q = @
+    MAKE += --no-print-directory
+endif
+
+pur_objects = $(CURDIR)/$$@
+pur_objects = $$(subst __UPDIR__/,../,$(CURDIR)/$$@)
+
+#
+# PUR
+#
+pur_disp_depend.c         = echo "  CPP        $(pur_objects)"
+pur_disp_compile.c        = echo "  CC         $(pur_objects)"
+pur_disp_link.c           = echo "  LINK       $(pur_objects)"
+pur_disp_link_so.c        = echo "  LINKSO     $(pur_objects)"
+
+pur_disp_ar               = echo "  AR         $(pur_objects)"
+pur_disp_ranlib           = echo "  RANLIB     $(pur_objects)"
+pur_disp_ld               = echo "  LD         $(pur_objects)"
+
+pur_disp_cp               = echo "  CP         $(pur_objects)"
+pur_disp_mkdir            = echo "  MKDIR      $(CURDIR)/$@"
+pur_disp_clean            = echo "  CLEAN      $$(subst _clean,,$(pur_objects))"
+
+#
+# VER
+#
+ver_disp_depend.c         = echo "$(subst ",\",$(_cmd_depend.c))"
+ver_disp_compile.c        = echo "$(subst ",\",$(_cmd_compile.c))"
+ver_disp_link.c           = echo "$(subst ",\",$(_cmd_link.c))"
+ver_disp_link_so.c        = echo "$(subst ",\",$(_cmd_link_so.c))"
+
+ver_disp_ar               = echo "$(subst ",\",$(_cmd_ar))"
+ver_disp_ranlib           = echo "$(subst ",\",$(_cmd_ranlib))"
+ver_disp_ld               = echo "$(subst ",\",$(_cmd_ld))"
+
+ver_disp_cp               = echo "$(subst ",\",$(_cmd_cp))"
+ver_disp_mkdir            = echo "$(subst ",\",$(_cmd_mkdir))"
+ver_disp_clean            = echo "$(subst ",\",$(_cmd_clean) $1 .$1 $$@.cmd)"
+
+#
+# DISP
+#
+disp_depend.c             = $($(verbose)_disp_depend.c)
+disp_compile.c            = $($(verbose)_disp_compile.c)
+disp_link.c               = $($(verbose)_disp_link.c)
+disp_link_so.c            = $($(verbose)_disp_link_so.c)
+
+disp_ar                   = $($(verbose)_disp_ar)
+disp_ranlib               = $($(verbose)_disp_ranlib)
+disp_ld                   = $($(verbose)_disp_ld)
+
+disp_cp                   = $($(verbose)_disp_cp)
+disp_mkdir                = $($(verbose)_disp_mkdir)
+disp_clean                = $($(verbose)_disp_clean)
+
+#
+# _CMD
+#
+_cmd_depend.c             = $(CC) $(__CFLAGS) $($1_cflags) \
+                            $$($1_$$<_cflags-y) $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+                            $(CP) $$@ $$@.p; \
+                            $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
+                            $(MV) $$@.p $$@
+_cmd_compile.c            = $(CC) $(__CFLAGS) $($1_cflags) \
+                            $$($1_$$<_cflags-y) $($1_includes) -c -o $$@ $$<
+_cmd_link.c               = $(CC) $(__CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                            $($1_ldflags) $(__LDFLAGS)
+_cmd_link_so.c            = $(CC) $(__CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^) \
+                            $($1_ldflags) $$(filter-out -static,$(__LDFLAGS)) -shared $$(if $($1_soname-y),-Wl$$(comma)-soname$$(comma)$($1_soname-y),-Wl$$(comma)-soname$$(comma)$$(notdir $$@))
+
+_cmd_ar                   = $(AR) rcs $$@ $$(filter-out __FORCE $($1_depends-y),$$^)
+_cmd_ranlib               = $(RANLIB) $$@
+_cmd_ld                   = $(LD) $(LDOPTS) -r -o $$@ $$(filter-out __FORCE $($1_depends-y),$$^)
+
+_cmd_cp                   = $(CP) $$< $$@
+_cmd_mkdir                = $(MKDIR) $@
+_cmd_clean                = $(RM)
+
+#
+# CMD
+#
+cmd_depend.c              = echo "$(subst ",\",$(_cmd_depend.c))" > $$@.cmd        ; $(_cmd_depend.c)
+cmd_compile.c             = echo "$(subst ",\",$(_cmd_compile.c))" > $$@.cmd       ; $(_cmd_compile.c)
+cmd_link.c                = echo "$(subst ",\",$(_cmd_link.c))" > $$@.cmd          ; $(_cmd_link.c)
+cmd_link_so.c             = echo "$(subst ",\",$(_cmd_link_so.c))" > $$@.cmd       ; $(_cmd_link_so.c)
+
+cmd_ar                    = echo "$(subst ",\",$(_cmd_ar))" > $$@.cmd              ; $(_cmd_ar)
+cmd_ranlib                = echo "$(subst ",\",$(_cmd_ranlib))" >> $$@.cmd         ; $(_cmd_ranlib)
+cmd_ld                    = echo "$(subst ",\",$(_cmd_ld))" > $$@.cmd              ; $(_cmd_ld)
+
+cmd_cp                    = $(_cmd_cp)
+cmd_mkdir                 = $(_cmd_mkdir)
+cmd_clean                 = $(_cmd_clean)
+
+#
+# DO
+#
+do_depend.c               = @$(disp_depend.c)         ; $(MKDIR) $$(dir $$@); $(cmd_depend.c)
+do_compile.c              = @$(disp_compile.c)        ; $(MKDIR) $$(dir $$@); $(cmd_compile.c)
+do_link.c                 = @$(disp_link.c)           ; $(MKDIR) $$(dir $$@); $(cmd_link.c)
+do_link_so.c              = @$(disp_link_so.c)        ; $(MKDIR) $$(dir $$@); $(cmd_link_so.c)
+
+do_ar                     = @$(disp_ar)               ; $(MKDIR) $$(dir $$@); $(cmd_ar)
+do_ranlib                 = @$(disp_ranlib)           ; $(MKDIR) $$(dir $$@); $(cmd_ranlib)
+do_ld                     = @$(disp_ld)               ; $(MKDIR) $$(dir $$@); $(cmd_ld)
+
+do_cp                     = @$(disp_cp)               ; $(MKDIR) $$(dir $$@); $(cmd_cp)
+do_mkdir                  = @$(disp_mkdir)            ; $(cmd_mkdir)
+do_clean                  = @$(disp_clean)            ; $(cmd_clean)
+
+#
+# Functions
+#
+
+define target-defaults_base
+    $(eval comma           = ,)
+    $(eval $1_sources_c    = $(filter %.c,$2))
+    $(eval $1_headers_c    = $(filter %.h,$2))
+    $(eval $1_objects_c    = $(addprefix .$1/, $(subst .c,.c.o,$($1_sources_c))))
+    $(eval $1_objects_e    = $(subst ",,$(filter %.o,$2)))
+    $(eval $1_objects_e   += $(subst ",,$(filter %.a,$2)))
+    $(eval $1_objects_e   += $(subst ",,$(filter %.lib,$2)))
+    $(eval $1_depends_c    = $(addprefix .$1/, $(subst .c,.c.d,$($1_sources_c))))
+    $(eval $1_cflags       = $($1_cflags-y))
+    $(eval $1_includes     = $(addprefix -I, $($1_includes-y)))
+    $(eval $1_libraries    = $(addprefix -L, ./ $($1_libraries-y)))
+    $(eval $1_ldflags      = $($1_ldflags-y))
+
+    $(eval $1_depends_c    = $(subst ../,__UPDIR__/,$($1_depends_c)))
+    $(eval $1_objects_c    = $(subst ../,__UPDIR__/,$($1_objects_c)))
+
+    $(eval $1_directories  = $(sort $(dir .$1/ $($1_objects_c))))
+
+    $(eval $1_depends      = $(MAKEFILE_LIST) $($1_depends_c))
+    $(eval $1_depends-y   += $($1_depends))
+    $(eval $1_depends-n   += $($1_headers_c))
+
+    $(eval target-builds  += $1)
+    $(eval target-objects += $($1_objects_c))
+    $(eval target-depends += $($1_depends_c))
+    $(eval target-cleans  += $1_clean)
+
+    $($1_directories):
+	$(do_mkdir) $($1_directories)
+
+    $($1_depends_c):   $($1_headers_c)
+
+    $($1_objects_c):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
+    $($1_objects_e):   $(MAKEFILE_LIST)
+
+    $(target-depends): $(filter-out $(target-builds) $($1_depends), $($1_depends-y))
+
+    $1: .$1/$1 $(MAKEFILE_LIST)
+	$(do_cp)
+
+    .$1/$1: $($1_depends-y) $($1_objects_c) $($1_objects_e)
+
+    $1_clean: __FORCE
+	$(do_clean) $1 .$1 $$@.cmd $1.dSYM
+endef
+
+define target-defaults-rule
+    $(eval source = $(patsubst $3,$4,$(subst __UPDIR__/,../,$2)))
+    $2: ${source} $(MAKEFILE_LIST)
+	$5
+endef
+
+define target-defaults
+    $(eval $(call target-defaults_base,$1,$2))
+
+    $(eval $(foreach F,$($1_depends_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.d,%.c,$(do_depend.c)))))
+    $(eval $(foreach F,$($1_objects_c), $(eval $(call target-defaults-rule,$1,$F,.$1/%.c.o,%.c,$(do_compile.c)))))
+endef
+
+define target-variables
+    $(eval $(call target-defaults,$1,$2))
+
+    .$1/$1:
+	$(do_link.c)
+endef
+
+define target.so-variables
+    $(eval $(call target-defaults,$1,$2))
+
+    .$1/$1:
+	$(do_link_so.c)
+endef
+
+define target.a-variables
+    $(eval $(call target-defaults,$1,$2))
+
+    .$1/$1:
+	$(do_ar)
+	$(do_ranlib)
+endef
+
+define target.o-variables
+    $(eval $(call target-defaults,$1,$2))
+
+    .$1/$1:
+	$(do_ld)
+endef
+
+define target_empty-defaults
+    targets-empty += $1
+
+    $(addsuffix _clean, $1): __FORCE
+	$(do_clean) $1 .$1 $$@.cmd
+endef
+
+define subdir_empty-defaults
+    $(addsuffix _$2, $1): __FORCE
+	@+ $(MAKE) $($1_makeflags-y) -C '$$(subst _$2,,$$@)' $2
+endef
+
+define subdir-defaults
+    subdirs += $1
+
+    $1: $1_all
+
+    $(addsuffix _all, $1): $($1_depends-y) __FORCE
+	@+ $(MAKE) $($1_makeflags-y) -C '$$(subst _all,,$$@)' all
+
+    $(addsuffix _build, $1): $($1_depends-y) __FORCE
+	@+ $(MAKE) $($1_makeflags-y) -C '$$(subst _build,,$$@)' build
+
+    $(addsuffix _clean, $1): __FORCE
+	@+ $(MAKE) $($1_makeflags-y) -C '$$(subst _clean,,$$@)' clean
+endef
+
+#
+# Definitions
+#
+
+# generate target variables
+
+$(eval $(foreach T,$(target-y), $(eval $(call target-variables,$T,$($T_files-y)))))
+$(eval $(foreach T,$(target-n), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T,$(target-),  $(eval $(call target_empty-defaults,$T))))
+
+$(eval $(foreach T,$(target.o-y), $(eval $(call target.o-variables,$T,$($T_files-y)))))
+$(eval $(foreach T,$(target.o-n), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T,$(target.o-),  $(eval $(call target_empty-defaults,$T))))
+
+$(eval $(foreach T,$(target.a-y), $(eval $(call target.a-variables,$T,$($T_files-y)))))
+$(eval $(foreach T,$(target.a-n), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T,$(target.a-),  $(eval $(call target_empty-defaults,$T))))
+
+$(eval $(foreach T,$(target.so-y), $(eval $(call target.so-variables,$T,$($T_files-y)))))
+$(eval $(foreach T,$(target.so-n), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T,$(target.so-),  $(eval $(call target_empty-defaults,$T))))
+
+# generate subdir targets
+
+$(eval $(foreach S,$(subdir-y),$(eval $(call subdir-defaults,$S))))
+$(eval $(foreach S,$(subdir-n),$(eval $(call subdir_empty-defaults,$S,clean))))
+$(eval $(foreach S,$(subdir-),$(eval $(call subdir_empty-defaults,$S,clean))))
+
+# generic tags
+
+all: $(addsuffix _all, $(subdirs))
+all: $(target-builds)
+all: $(target.extra-y)
+all: __FORCE
+	@true
+
+clean: $(addsuffix _clean, $(subdir-y) $(subdir-n) $(subdir-))
+clean: $(target-cleans)
+clean: $(addsuffix _clean, $(targets-empty))
+clean: __FORCE
+
+__FORCE:
+	@true
+
+ifneq "$(MAKECMDGOALS)" "clean"
+-include $(target-depends)
+endif
