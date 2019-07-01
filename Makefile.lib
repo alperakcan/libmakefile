@@ -48,6 +48,7 @@
 #   20181017 - fix subdir makeflag passing
 #   20190104 - add soname support
 #   20190701 - do not override depends-y
+#   20190702 - fix depends-y for subdirs
 
 #
 # Example
@@ -856,10 +857,10 @@ define subdir-defaults
 
     $1: $1_all
 
-    $(addsuffix _all, $1): $($1_depends_y) __FORCE
+    $(addsuffix _all, $1): $($1_depends-y) __FORCE
 	@+ $(MAKE) $($1_makeflags-y) -C '$$(subst _all,,$$@)' all
 
-    $(addsuffix _build, $1): $($1_depends_y) __FORCE
+    $(addsuffix _build, $1): $($1_depends-y) __FORCE
 	@+ $(MAKE) $($1_makeflags-y) -C '$$(subst _build,,$$@)' build
 
     $(addsuffix _clean, $1): __FORCE
