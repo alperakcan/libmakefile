@@ -49,6 +49,7 @@
 #   20190104 - add soname support
 #   20190701 - do not override depends-y
 #   20190702 - fix depends-y for subdirs
+#   20190806 - fix parallel compilation of subdirs
 
 #
 # Example
@@ -855,6 +856,7 @@ endef
 define subdir-defaults
     subdirs += $1
 
+    .NOTPARALLEL: $1
     $1: $1_all
 
     $(addsuffix _all, $1): $($1_depends-y) __FORCE
