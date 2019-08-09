@@ -727,6 +727,9 @@ define target-defaults_base
 	$(do_cp)
 	$(do_print_deps)
 
+    .NOTPARALLEL:
+    $($1_objects_e): $($1_depends_y)
+
     .$1/$1: $($1_depends_y) $($1_objects_c) $($1_objects_cc) $($1_objects_cpp) $($1_objects_moc) $($1_objects_m) $($1_objects_e)
 
     $1_clean: __FORCE
