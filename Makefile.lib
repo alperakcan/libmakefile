@@ -662,6 +662,7 @@ define target-defaults_base
     $(eval $1_depends_cpp  = $(addprefix .$1/, $(subst .cpp,.cpp.d,$($1_sources_cpp))))
     $(eval $1_depends_moc  = $(addprefix .$1/, $(subst .moc,-moc.cpp.d,$($1_sources_moc))))
     $(eval $1_depends_m    = $(addprefix .$1/, $(subst .m,.m.d,$($1_sources_m))))
+    $(eval $1_depends_g    = $($1_depends-y))
     $(eval $1_cflags       = $($1_cflags-y))
     $(eval $1_cxxflags     = $($1_cxxflags-y))
     $(eval $1_includes     = $(addprefix -I, $($1_includes-y)))
@@ -684,6 +685,12 @@ define target-defaults_base
 
     $(eval $1_depends_m    = $(subst ../,__UPDIR__/,$($1_depends_m)))
     $(eval $1_objects_m    = $(subst ../,__UPDIR__/,$($1_objects_m)))
+
+    $(eval $1_objects      = $($1_objects_c))
+    $(eval $1_objects     += $($1_objects_cc))
+    $(eval $1_objects     += $($1_objects_cpp))
+    $(eval $1_objects     += $($1_objects_moc))
+    $(eval $1_objects     += $($1_objects_m))
 
     $(eval $1_directories  = $(sort $(dir .$1/ $($1_objects_c) $($1_objects_cpp) $($1_objects_m) $($1_objects_moc))))
 
@@ -728,10 +735,9 @@ define target-defaults_base
 	$(do_cp)
 	$(do_print_deps)
 
-    .NOTPARALLEL:
-    $($1_objects_e): $($1_depends_y)
+    ..NOTPARALLEL: $($1_depends_y) $($1_objects_e) $($1_objects)
 
-    .$1/$1: $($1_depends_y) $($1_objects_c) $($1_objects_cc) $($1_objects_cpp) $($1_objects_moc) $($1_objects_m) $($1_objects_e)
+    .$1/$1: $($1_depends_y) $($1_objects_e) $($1_objects)
 
     $1_clean: __FORCE
 	$(do_clean) $1 .$1 $$@.cmd $1.dSYM $($1_headers_uic)
