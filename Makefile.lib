@@ -740,9 +740,9 @@ define target-defaults_base
 	$(do_cp)
 	$(do_print_deps)
 
-    .NOTPARALLEL: $($1_depends_y) $($1_objects_e) $($1_objects)
+    .NOTPARALLEL: $($1_depends_y) $($1_objects) $($1_objects_e)
 
-    .$1/$1: $($1_depends_y) $($1_objects_e) $($1_objects)
+    .$1/$1: $($1_depends_y) $($1_objects) $($1_objects_e)
 
     $1_clean: __FORCE
 	$(do_clean) $1 .$1 $$@.cmd $1.dSYM $($1_headers_uic)
