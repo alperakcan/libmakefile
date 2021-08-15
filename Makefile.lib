@@ -235,6 +235,8 @@ else
 endif
 
 ifeq      ($(TARGET_OS),WINDOWS)
+    override __WINDOWS__  = y
+    override MFLAGS     += __WINDOWS__=y
 else ifeq ($(TARGET_OS),MACOS)
     override __DARWIN__  = y
     override MFLAGS     += __DARWIN__=y
@@ -759,7 +761,7 @@ define target-defaults
 
     $(eval $(foreach F,$($1_depends_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.d,%.cc,$(do_depend.cxx)))))
     $(eval $(foreach F,$($1_objects_cc), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cc.o,%.cc,$(do_compile.cxx)))))
-    
+
     $(eval $(foreach F,$($1_depends_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.d,%.cpp,$(do_depend.cxx)))))
     $(eval $(foreach F,$($1_objects_cpp), $(eval $(call target-defaults-rule,$1,$F,.$1/%.cpp.o,%.cpp,$(do_compile.cxx)))))
 
