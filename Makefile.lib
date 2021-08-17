@@ -237,6 +237,8 @@ endif
 ifeq      ($(TARGET_OS),WINDOWS)
     override __WINDOWS__  = y
     override MFLAGS     += __WINDOWS__=y
+    __CFLAGS      += -D__WINDOWS__=1
+    __CFLAGS      += -D_POSIX=1
 else ifeq ($(TARGET_OS),MACOS)
     override __DARWIN__  = y
     override MFLAGS     += __DARWIN__=y
@@ -803,6 +805,9 @@ ifeq ($($1_sources_cpp),)
 	$(do_link.c)
 else
 	$(do_link.cxx)
+endif
+ifeq ($(__WINDOWS__), y)
+	${Q}${CP} $$@.exe $$@
 endif
 	$(do_print_deps)
 endef
