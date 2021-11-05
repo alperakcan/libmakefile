@@ -51,6 +51,7 @@
 #   20190702 - fix depends-y for subdirs
 #   20190806 - fix parallel compilation of ${target}_depends-y
 #   20200627 - uniq files
+#   20211105 - accept *.h as cpp header
 
 #
 # Example
@@ -648,7 +649,8 @@ define target-defaults_base
     $(eval $1_headers_c    = $(filter %.h,$2))
     $(eval $1_sources_cc   = $(filter %.cc,$2))
     $(eval $1_sources_cpp  = $(filter %.cpp,$2))
-    $(eval $1_headers_cxx  = $(filter %.hh,$2))
+    $(eval $1_headers_cxx  = $(filter %.h,$2))
+    $(eval $1_headers_cxx += $(filter %.hh,$2))
     $(eval $1_headers_cxx += $(filter %.hpp,$2))
     $(eval $1_sources_moc  = $(filter %.moc,$2))
     $(eval $1_sources_uic  = $(filter %.ui,$2))
