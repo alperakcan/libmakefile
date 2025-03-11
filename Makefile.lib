@@ -931,7 +931,7 @@ define dist-defaults
 
     $1_distclean: __FORCE
 	$(do_distclean) $(addprefix $(dist.dir)/$2/, $($1_files))
-	$(Q)if [ -e '$$(abspath $(dist.dir))' ]; then find '$$(abspath $(dist.dir))' -depth -type d -empty -exec rm -rf {} \; ; fi
+	$(Q)if [ -e '$$(abspath $(dist.dir))' ]; then find '$$(abspath $(dist.dir))' -depth -type d -empty -exec rm -rf {} \; 2>/dev/null ; fi
 endef
 
 define dist.share-variables
