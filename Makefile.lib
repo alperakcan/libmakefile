@@ -904,9 +904,9 @@ define target_empty-defaults
 	$(do_clean) $1 .$1 $$@.cmd
 endef
 
-define subdir_empty-defaults
-    $(addsuffix _$2, $1): __FORCE
-	${Q}+ $(MAKE) $($1_makeflags-y) -C '$$(subst _$2,,$$@)' $2
+define subdir_clean-defaults
+    $(addsuffix _clean, $1): __FORCE
+	${Q}+ $(MAKE) $($1_makeflags-y) -C '$$(subst _clean,,$$@)' clean
 endef
 
 define subdir-defaults
@@ -918,9 +918,6 @@ define subdir-defaults
     $(addsuffix _all, $1): $($1_depends-y) __FORCE
 	${Q}+ $(MAKE) $($1_makeflags-y) -C '$$(subst _all,,$$@)' all
 	$(do_print_deps)
-
-    $(addsuffix _clean, $1): __FORCE
-	${Q}+ $(MAKE) $($1_makeflags-y) -C '$$(subst _clean,,$$@)' clean
 endef
 
 define dist-defaults
@@ -1006,8 +1003,7 @@ $(eval $(foreach T,$(target.a.host-),  $(eval $(call target_empty-defaults,$T)))
 # generate subdir targets
 
 $(eval $(foreach S,$(subdir-y),$(eval $(call subdir-defaults,$S))))
-$(eval $(foreach S,$(subdir-n),$(eval $(call subdir_empty-defaults,$S,clean))))
-$(eval $(foreach S,$(subdir-),$(eval $(call subdir_empty-defaults,$S,clean))))
+$(eval $(foreach S,$(sort $(subdir-y) $(subdir-n) $(subdir-)),$(eval $(call subdir_clean-defaults,$S))))
 
 # distributin tags
 
