@@ -516,28 +516,28 @@ _cmd_moc.qt.host          = $(HOSTMOC) $($1_mocflags) $($1_includes) $$< -o $$@
 _cmd_uic.qt               = $(UIC) $$< -o $$@
 _cmd_uic.qt.host          = $(HOSTUIC) $$< -o $$@
 
-_cmd_depend.m             = $(CC) $(__CXXFLAGS) $($1_cflags) $($1_cxxflags) \
-                            $$($1_$$<_cflags-y) $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+_cmd_depend.m             = $(CC) $(__CFLAGS) $($1_cflags) $($1_mflags) \
+                            $$($1_$$<_cflags-y) $$($1_$$<_mflags-y) $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
                             $(CP) $$@ $$@.p; \
                             $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
                             $(MV) $$@.p $$@
-_cmd_compile.m            = $(CC) $(__ARCHFLAGS) $(__CXXFLAGS) $($1_archflags) $($1_cflags) $($1_cxxflags) \
-                            $$($1_$$<_cflags-y) $($1_includes) -c -o $$@ $$<
-_cmd_link.m               = $(CC) $(__ARCHFLAGS) $(__CXXFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
+_cmd_compile.m            = $(CC) $(__ARCHFLAGS) $(__CFLAGS) $($1_archflags) $($1_cflags) $($1_mflags) \
+                            $$($1_$$<_cflags-y) $$($1_$$<_mflags-y) $($1_includes) -c -o $$@ $$<
+_cmd_link.m               = $(CC) $(__ARCHFLAGS) $(__CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
                             $($1_archflags) $($1_ldflags) $(__LDFLAGS)
-_cmd_link_so.m            = $(CC) $(__ARCHFLAGS) $(__CXXFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
+_cmd_link_so.m            = $(CC) $(__ARCHFLAGS) $(__CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
                             $($1_archflags) $($1_ldflags) $$(filter-out -static,$(__LDFLAGS)) -shared $$(if $($1_soname-y),-Wl$$(comma)-soname$$(comma)$($1_soname-y),)
 
-_cmd_depend.m.host        = $(HOSTCC) $(__CXXFLAGS) $($1_cflags) \
-                            $($1_cxxflags) $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
+_cmd_depend.m.host        = $(HOSTCC) $(__CFLAGS) $($1_cflags)  $($1_mflags) \
+                            $$($1_$$<_cflags-y) $$($1_$$<_mflags-y) $($1_includes) -M $$< | $(SED) 's,\($$(basename $$(basename $$(notdir $$@)))\.o\) *:,$$(dir $$@)\1 $$@: ,' > $$@; \
                             $(CP) $$@ $$@.p; \
                             $(SED) -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$$$//' -e '/^$$$$/ d' -e 's/$$$$/ :/' < $$@ >> $$@.p; \
                             $(MV) $$@.p $$@
-_cmd_compile.m.host       = $(HOSTCC) $(__HOSTARCHFLAGS) $(__CXXFLAGS) $($1_archflags) $($1_cflags) \
-                            $($1_cxxflags) $($1_includes) $$($1_$$<_cflags-y) -c -o $$@ $$<
-_cmd_link.m.host          = $(HOSTCC) $(__HOSTARCHFLAGS) $(__CXXFLAGS)  $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
+_cmd_compile.m.host       = $(HOSTCC) $(__HOSTARCHFLAGS) $(__CFLAGS) $($1_archflags) $($1_cflags) $($1_mflags) \
+                            $$($1_$$<_cflags-y) $$($1_$$<_mflags-y) $($1_includes) -c -o $$@ $$<
+_cmd_link.m.host          = $(HOSTCC) $(__HOSTARCHFLAGS) $(__CFLAGS)  $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
                             $($1_archflags) $($1_ldflags) $(__LDFLAGS)
-_cmd_link_so.m.host       = $(HOSTCC) $(__HOSTARCHFLAGS) $(__CXXFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
+_cmd_link_so.m.host       = $(HOSTCC) $(__HOSTARCHFLAGS) $(__CFLAGS) $($1_libraries) -o $$@ $$(filter-out __FORCE $($1_depends_y),$$^) \
                             $($1_archflags) $($1_ldflags) $$(filter-out -static,$(__LDFLAGS)) -shared $$(if $($1_soname-y),-Wl$$(comma)-soname$$(comma)$($1_soname-y),)
 
 _cmd_ar                   = $(AR) rcs $$@ $$(filter-out __FORCE $($1_depends_y),$$^)
@@ -692,6 +692,7 @@ define target-defaults_base
     $(eval $1_archflags    = $($1_archflags-y))
     $(eval $1_cflags       = $($1_cflags-y))
     $(eval $1_cxxflags     = $($1_cxxflags-y))
+    $(eval $1_mflags       = $($1_mflags-y))
     $(eval $1_includes     = $(addprefix -I, $($1_includes-y)))
     $(eval $1_libraries    = $(addprefix -L, ./ $($1_libraries-y)))
     $(eval $1_ldflags      = $($1_ldflags-y))
