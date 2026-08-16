@@ -69,6 +69,7 @@
 #   20211105 - accept *.h as cpp header
 #   20220611 - archflags support
 #   20260806 - target_file_depends-y support
+#   20260816 - resolve nested target_depends-y
 
 #
 # Example
@@ -765,6 +766,8 @@ define target-defaults_base
     $($1_objects_m):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
     $($1_objects_e):   $(MAKEFILE_LIST)
 
+    $(foreach D,$($1_depends-y), $(call target-depends-rule,$D))
+
     $(target-depends): $(filter-out $(target-builds) $($1_depends), $($1_depends_y))
 
     $1: .$1/$1 $(MAKEFILE_LIST)
@@ -777,6 +780,10 @@ define target-defaults_base
 	$(do_clean) $1 .$1 $$@.cmd $1.dSYM $($1_headers_uic)
 
     $1_distclean: __FORCE
+endef
+
+define target-depends-rule
+    $(if $(filter $1,$(target-depends-seen)),,$(eval target-depends-seen += $1)$(if $($1_depends-y),$(eval $1: $($1_depends-y))$(foreach D,$($1_depends-y),$(call target-depends-rule,$D))))
 endef
 
 define target-defaults-rule
