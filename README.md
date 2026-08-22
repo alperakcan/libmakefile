@@ -18,15 +18,38 @@ target.so just add target.so to target's depend list with;
 targets may also depend to the subdirectories, so target commands will
 not be executed until subdirs commands get executed.
 
+every target and flag variable is also available per platform and per os, so a
+target may be built only where it applies;
+
+    target-LINUX        = target.so
+    target_cflags-y     = -DUSER_DEFINED
+    target_cflags-MACOS = -DUSER_DEFINED_ONLY_FOR_MACOS
+
 some usefull files are created in make process, for debugging and for speedup
  
-    .target/*.dep              : includes depend information for the file
-    .target/*.dep.cmd          : the command used for generating .dep file
+    .target/*.d                : includes depend information for the file
+    .target/*.d.cmd            : the command used for generating .d file
     .target/*.o                : object for the file
     .target/*.o.cmd            : the command used for creating the object
     .target/target[a,so,o]     : the target
     .target/target[a,so,o].cmd : the command used for creating the target
     target                     : the target
+
+Available Suffixes
+------------------
+
+    -y                     : always used
+    -n, -                  : never used
+    -$(TARGET_PLATFORM)    : used when building for that platform
+    -$(TARGET_OS)          : used when building for that os
+
+    TARGET_PLATFORM        : WINDOWS, DARWIN, LINUX, UNKNOWN
+    TARGET_OS              : WINDOWS, MACOS,  LINUX, UNKNOWN
+
+merged in -y, -$(TARGET_PLATFORM), -$(TARGET_OS) order, each expanded once. so a
+value is not repeated when TARGET_PLATFORM and TARGET_OS are equal.
+
+the [y,n, ] below is shorthand, every one of them takes the suffixes above too.
 
 Available Targets
 -----------------
@@ -59,18 +82,27 @@ Available Target Flags
                                          command only for corresponding target.
     $(target)_files-[y,n, ]            : files must match *.[cho] pattern. *.[ch] files
                                          will be exemined with $(CC) -M command to
-                                         generate dependency files (*.dep) files. *.[o]
+                                         generate dependency files (*.d) files. *.[o]
                                          files will be used only in linking stage. all
                                          files generated with make command will be
                                          removed with $(RM) command.
+    $(target)_archflags-[y,n, ]        : archflags will be added to global $(ARCHFLAGS)
+                                         for corresponding target only, at both compile
+                                         and link stage.
     $(target)_cflags-[y,n, ]           : cflags will be added to global $(CFLAGS) for
                                          corresponding target only.
-    $(target)_cppflags-[y,n, ]         : cppflags will be added to global $(CPPFLAGS)
+    $(target)_cxxflags-[y,n, ]         : cxxflags will be added to global $(CXXFLAGS)
                                          for corresponding target only.
+    $(target)_mflags-[y,n, ]           : mflags will be added to global $(CFLAGS) for
+                                         corresponding target only, for *.m files.
+    $(target)_${file}_depends-[y,n, ]  : all words in depends flag will be added to
+                                         target file prerequisite's list.
     $(target)_${file}_cflags-[y,n, ]   : cflags will be added to global $(CFLAGS) for
                                          corresponding target file only.
-    $(target)_${file}_cppflags-[y,n, ] : cppflags will be added to global $(CPPFLAGS)
+    $(target)_${file}_cxxflags-[y,n, ] : cxxflags will be added to global $(CXXFLAGS)
                                          for corresponding target file only.
+    $(target)_${file}_mflags-[y,n, ]   : mflags will be added to global $(CFLAGS) for
+                                         corresponding target file only.
     $(target)_includes-[y,n, ]         : a '-I' will be added to all words in includes
                                          flag, and will be used only for corresponding
                                          target.
@@ -79,8 +111,23 @@ Available Target Flags
                                          target.
     $(target)_ldflags-[y,n, ]          : ldflags will be added to gloabal $(LDFLAGS) for
                                          corresponding target only.
+    $(target)_soname-y                 : passed as -Wl,-soname for a target.so.
     $(target)_depends-[y,n, ]          : all words in depends flag will be added to
                                          prerequisite's list.
+
+Distribution Commands
+---------------------
+
+    dist.dir                           : distribution folder
+    dist.base                          : optional subfolder appended to obj, src, include
+                                         and share. empty by default.
+
+    dist.bin-[y,n, ]                   : files to be copied under $(dist.dir)/bin
+    dist.lib-[y,n, ]                   : files to be copied under $(dist.dir)/lib
+    dist.obj-[y,n, ]                   : files to be copied under $(dist.dir)/obj/$(dist.base)
+    dist.src-[y,n, ]                   : files to be copied under $(dist.dir)/src/$(dist.base)
+    dist.include-[y,n, ]               : files to be copied under $(dist.dir)/include/$(dist.base)
+    dist.share-[y,n, ]                 : files to be copied under $(dist.dir)/share/$(dist.base)
 
 Usage
 -----
@@ -93,8 +140,9 @@ you can check projects using libmakefile, for detailed information:
 
 Makefile Example using Makefile.lib
 
-    target-y  = target1
-    target-y += target2
+    target-y      = target1
+    target-y     += target2
+    target-LINUX += target3
 
     target1_files-y = \
         target_file_shared.c \
@@ -113,6 +161,12 @@ Makefile Example using Makefile.lib
         -DUSER_DEFINED \
         -O2
 
+    target1_cflags-LINUX = \
+        -DUSER_DEFINED_ONLY_FOR_LINUX
+
+    target1_cflags-WINDOWS = \
+        -DUSER_DEFINED_ONLY_FOR_WINDOWS
+
     target1_ldflags-y = \
         -luserdefined
 
@@ -120,6 +174,9 @@ Makefile Example using Makefile.lib
         target_file_shared.c \
         target2_file_2.c \
         target2_file_3.c
+
+    target2_files-WINDOWS = \
+        target2_file_windows.c
 
     target2_includes-y = \
         ./ \
@@ -138,5 +195,8 @@ Makefile Example using Makefile.lib
 
     target2_ldflags-y = \
         -luserdefined
+
+    target3_files-y = \
+        target3_file_1.c
 
     include Makefile.lib
