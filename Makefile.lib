@@ -1067,12 +1067,12 @@ $(eval $(foreach S,$(sort $(subdir-y) $(subdir-n) $(subdir-)),$(eval $(call subd
 # distributin tags
 
 ifneq ($(dist.dir),)
-$(eval $(foreach D,$(dist.bin-y), $(eval $(call dist.bin-variables,$D))))
-$(eval $(foreach D,$(dist.lib-y), $(eval $(call dist.lib-variables,$D))))
-$(eval $(foreach D,$(dist.obj-y), $(eval $(call dist.obj-variables,$D))))
-$(eval $(foreach D,$(dist.src-y), $(eval $(call dist.src-variables,$D))))
-$(eval $(foreach D,$(dist.include-y), $(eval $(call dist.include-variables,$D))))
-$(eval $(foreach D,$(dist.share-y), $(eval $(call dist.share-variables,$D))))
+$(eval $(foreach D, $(sort $(call target-merge-y,dist.bin)), $(eval $(call dist.bin-variables,$D))))
+$(eval $(foreach D, $(sort $(call target-merge-y,dist.lib)), $(eval $(call dist.lib-variables,$D))))
+$(eval $(foreach D, $(sort $(call target-merge-y,dist.obj)), $(eval $(call dist.obj-variables,$D))))
+$(eval $(foreach D, $(sort $(call target-merge-y,dist.src)), $(eval $(call dist.src-variables,$D))))
+$(eval $(foreach D, $(sort $(call target-merge-y,dist.include)), $(eval $(call dist.include-variables,$D))))
+$(eval $(foreach D, $(sort $(call target-merge-y,dist.share)), $(eval $(call dist.share-variables,$D))))
 endif
 
 # generic tags
