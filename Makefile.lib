@@ -1061,7 +1061,7 @@ $(eval $(foreach T, $(sort $(target.a.host-)),  $(eval $(call target_empty-defau
 
 # generate subdir targets
 
-$(eval $(foreach S,$(subdir-y),$(eval $(call subdir-defaults,$S))))
+$(eval $(foreach S,$(sort $(call target-merge-y,subdir)),$(eval $(call subdir-defaults,$S))))
 $(eval $(foreach S,$(sort $(subdir-y) $(subdir-n) $(subdir-)),$(eval $(call subdir_clean-defaults,$S))))
 
 # distributin tags
