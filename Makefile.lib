@@ -70,13 +70,15 @@
 #   20220611 - archflags support
 #   20260806 - target_file_depends-y support
 #   20260816 - resolve nested target_depends-y
+#   20260823 - target_var-$(TARGET_PLATFORM), target_var-$(TARGET_OS) support
 
 #
 # Example
 # -------
 #
-#     target-y  = target1
-#     target-y += target2
+#     target-y      = target1
+#     target-y     += target2
+#     target-LINUX += target3
 #
 #     target1_files-y = target_file_shared.c \
 #                       target1_file_2.c \
@@ -85,8 +87,10 @@
 #                          /opt/include
 #     target1_libraries-y = ./ \
 #                           /opt/lib
-#     target1_cflags-y = -DUSER_DEFINED \
-#                        -O2
+#     target1_cflags-y       = -DUSER_DEFINED \
+#                              -O2
+#     target1_cflags-LINUX   = -DLINUX_ONLY
+#     target1_cflags-WINDOWS = -DWINDOWS_ONLY
 #     target1_ldflags-y = -luserdefined
 #
 #     target2_files-y = target_file_shared.c \
@@ -132,6 +136,24 @@
 #     .target/target[a,so,o]     : the target
 #     .target/target[a,so,o].cmd : the command used for creating the target
 #     target                     : the target
+#
+
+#
+# Available Suffixes
+# ------------------
+#
+#     -y                     : always used
+#     -n, -                  : never used
+#     -$(TARGET_PLATFORM)    : used when building for that platform
+#     -$(TARGET_OS)          : used when building for that os
+#
+#     TARGET_PLATFORM        : WINDOWS, DARWIN, LINUX, UNKNOWN
+#     TARGET_OS              : WINDOWS, MACOS,  LINUX, UNKNOWN
+#
+#     merged in -y, -$(TARGET_PLATFORM), -$(TARGET_OS) order, each expanded once. so a
+#     value is not repeated when TARGET_PLATFORM and TARGET_OS are equal.
+#
+#     the [y,n, ] below is shorthand, every one of them takes the suffixes above too.
 #
 
 #
@@ -247,13 +269,28 @@ uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 TARGET_MACHINE := $(subst -, ,$(shell $(CC) -dumpmachine 2>/dev/null))
 
 ifneq ($(findstring mingw, $(TARGET_MACHINE)),)
-    TARGET_OS := WINDOWS
+    TARGET_OS       := WINDOWS
+    TARGET_PLATFORM := WINDOWS
 else ifneq ($(findstring apple, $(TARGET_MACHINE)),)
-    TARGET_OS := MACOS
+    TARGET_OS       := MACOS
+    TARGET_PLATFORM := DARWIN
 else ifneq ($(findstring linux, $(TARGET_MACHINE)),)
-    TARGET_OS := LINUX
+    TARGET_OS       := LINUX
+    TARGET_PLATFORM := LINUX
 else
-    TARGET_OS := UNKNOWN
+    TARGET_OS       := UNKNOWN
+    TARGET_PLATFORM := UNKNOWN
+endif
+
+# suffixes to merge for every ${target}_${var}-[y,PLATFORM,OS] variable. TARGET_OS and
+# TARGET_PLATFORM are equal on most targets, so uniq the suffixes here rather than uniq'ing
+# the merged values later - $(sort) splits on words and would shred quoted flags such as
+# -DFOO="a b".
+
+TARGET_SUFFIXES := y $(TARGET_PLATFORM)
+
+ifneq ($(TARGET_OS),$(TARGET_PLATFORM))
+    TARGET_SUFFIXES += $(TARGET_OS)
 endif
 
 ifeq      ($(TARGET_OS),WINDOWS)
@@ -672,6 +709,14 @@ do_print_deps             = @$(disp_print_deps)
 # Functions
 #
 
+# target-merge-y - expand $1-y, $1-$(TARGET_PLATFORM) and $1-$(TARGET_OS), each variable at
+# most once. keep the body a single line and unindented - a define body is literal text, so a
+# newline or leading space in it becomes part of the value and leaks into every call site.
+
+define target-merge-y
+$(foreach __S,$(TARGET_SUFFIXES),$($1-$(__S)))
+endef
+
 define target-defaults_base
     $(eval comma           = ,)
     $(eval $1_sources_c    = $(filter %.c,$2))
@@ -698,13 +743,13 @@ define target-defaults_base
     $(eval $1_depends_cpp  = $(addprefix .$1/, $(subst .cpp,.cpp.d,$($1_sources_cpp))))
     $(eval $1_depends_moc  = $(addprefix .$1/, $(subst .moc,-moc.cpp.d,$($1_sources_moc))))
     $(eval $1_depends_m    = $(addprefix .$1/, $(subst .m,.m.d,$($1_sources_m))))
-    $(eval $1_archflags    = $($1_archflags-y))
-    $(eval $1_cflags       = $($1_cflags-y))
-    $(eval $1_cxxflags     = $($1_cxxflags-y))
-    $(eval $1_mflags       = $($1_mflags-y))
-    $(eval $1_includes     = $(addprefix -I, $($1_includes-y)))
-    $(eval $1_libraries    = $(addprefix -L, ./ $($1_libraries-y)))
-    $(eval $1_ldflags      = $($1_ldflags-y))
+    $(eval $1_archflags    = $(call target-merge-y,$1_archflags))
+    $(eval $1_cflags       = $(call target-merge-y,$1_cflags))
+    $(eval $1_cxxflags     = $(call target-merge-y,$1_cxxflags))
+    $(eval $1_mflags       = $(call target-merge-y,$1_mflags))
+    $(eval $1_includes     = $(addprefix -I, $(call target-merge-y,$1_includes)))
+    $(eval $1_libraries    = $(addprefix -L, ./ $(call target-merge-y,$1_libraries)))
+    $(eval $1_ldflags      = $(call target-merge-y,$1_ldflags))
 
     $(eval $1_headers_uic  = $(patsubst %.ui,.$1/%-ui.h,$(subst ../,__UPDIR__/,$($1_sources_uic))))
 
@@ -733,7 +778,7 @@ define target-defaults_base
 
     $(eval $1_depends      = $(MAKEFILE_LIST) $($1_depends_c) $($1_depends_cc) $($1_depends_cpp) $($1_depends_m) $($1_depends_moc))
     $(eval $1_depends_y    = $($1_depends))
-    $(eval $1_depends_y   += $($1_depends-y))
+    $(eval $1_depends_y   += $(sort $(call target-merge-y,$1_depends)))
     $(eval $1_depends-n   += $($1_headers_c))
     $(eval $1_depends-n   += $($1_headers_m))
     $(eval $1_depends-n   += $($1_headers_cxx))
@@ -766,7 +811,7 @@ define target-defaults_base
     $($1_objects_m):   .$1/%.o: .$1/%.d $(MAKEFILE_LIST)
     $($1_objects_e):   $(MAKEFILE_LIST)
 
-    $(foreach D,$($1_depends-y), $(call target-depends-rule,$D))
+    $(foreach D, $(sort $(call target-merge-y,$1_depends)), $(call target-depends-rule,$D))
 
     $(target-depends): $(filter-out $(target-builds) $($1_depends), $($1_depends_y))
 
@@ -783,7 +828,7 @@ define target-defaults_base
 endef
 
 define target-depends-rule
-    $(if $(filter $1,$(target-depends-seen)),,$(eval target-depends-seen += $1)$(if $($1_depends-y),$(eval $1: $($1_depends-y))$(foreach D,$($1_depends-y),$(call target-depends-rule,$D))))
+    $(if $(filter $1,$(target-depends-seen)),,$(eval target-depends-seen += $1)$(if $(sort $(call target-merge-y,$1_depends)),$(eval $1: $(sort $(call target-merge-y,$1_depends)))$(foreach D,$(sort $(call target-merge-y,$1_depends)),$(call target-depends-rule,$D))))
 endef
 
 define target-defaults-rule
@@ -929,7 +974,7 @@ define subdir-defaults
     $1: $1_all
 	$(do_print_deps)
 
-    $(addsuffix _all, $1): $($1_depends-y) __FORCE
+    $(addsuffix _all, $1): $(sort $(call target-merge-y,$1_depends)) __FORCE
 	${Q}+ $(MAKE) $($1_makeflags-y) -C '$$(subst _all,,$$@)' all
 	$(do_print_deps)
 endef
@@ -982,37 +1027,37 @@ endef
 
 # generate target variables
 
-$(eval $(foreach T,$(target-y), $(eval $(call target-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target)), $(eval $(call target-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.o-y), $(eval $(call target.o-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.o-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.o-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.o)), $(eval $(call target.o-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.o-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.o-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.a-y), $(eval $(call target.a-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.a-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.a-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.a)), $(eval $(call target.a-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.a-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.a-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.so-y), $(eval $(call target.so-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.so-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.so-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.so)), $(eval $(call target.so-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.so-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.so-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.host-y), $(eval $(call target.host-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.host-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.host-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.host)), $(eval $(call target.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.host-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.host-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.o.host-y), $(eval $(call target.o.host-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.o.host-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.o.host-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.o.host)), $(eval $(call target.o.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.o.host-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.o.host-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.so.host-y), $(eval $(call target.so.host-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.so.host-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.so.host-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.so.host)), $(eval $(call target.so.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.so.host-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.so.host-)),  $(eval $(call target_empty-defaults,$T))))
 
-$(eval $(foreach T,$(target.a.host-y), $(eval $(call target.a.host-variables,$T,$(sort $($T_files-y))))))
-$(eval $(foreach T,$(target.a.host-n), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T,$(target.a.host-),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-y,target.a.host)), $(eval $(call target.a.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
+$(eval $(foreach T, $(sort $(target.a.host-n)), $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(target.a.host-)),  $(eval $(call target_empty-defaults,$T))))
 
 # generate subdir targets
 
