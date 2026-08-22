@@ -265,33 +265,29 @@ __CFLAGS := -Wall -Wextra -Werror -pipe -ggdb3 -O2 -fsigned-char -fno-strict-ali
 #__CFLAGS += -fvisibility=hidden
 #__CFLAGS += -fno-math-errno -fno-trapping-math
 
-uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+uname_S        := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 TARGET_MACHINE := $(subst -, ,$(shell $(CC) -dumpmachine 2>/dev/null))
 
 ifneq ($(findstring mingw, $(TARGET_MACHINE)),)
     TARGET_OS       := WINDOWS
     TARGET_PLATFORM := WINDOWS
+    TARGET_ENABLED  := y WINDOWS
 else ifneq ($(findstring apple, $(TARGET_MACHINE)),)
     TARGET_OS       := MACOS
     TARGET_PLATFORM := DARWIN
+    TARGET_ENABLED  := y MACOS DARWIN
 else ifneq ($(findstring linux, $(TARGET_MACHINE)),)
     TARGET_OS       := LINUX
     TARGET_PLATFORM := LINUX
+    TARGET_ENABLED  := y LINUX
 else
     TARGET_OS       := UNKNOWN
     TARGET_PLATFORM := UNKNOWN
+    TARGET_ENABLED  := y UNKNOWN
 endif
 
-# suffixes to merge for every ${target}_${var}-[y,PLATFORM,OS] variable. TARGET_OS and
-# TARGET_PLATFORM are equal on most targets, so uniq the suffixes here rather than uniq'ing
-# the merged values later - $(sort) splits on words and would shred quoted flags such as
-# -DFOO="a b".
-
-TARGET_SUFFIXES := y $(TARGET_PLATFORM)
-
-ifneq ($(TARGET_OS),$(TARGET_PLATFORM))
-    TARGET_SUFFIXES += $(TARGET_OS)
-endif
+TARGET_SUFFIXES := y WINDOWS MACOS DARWIN LINUX n
+TARGET_DISABLED := $(filter-out $(TARGET_ENABLED),$(TARGET_SUFFIXES))
 
 ifeq      ($(TARGET_OS),WINDOWS)
     override __WINDOWS__  = y
@@ -709,12 +705,19 @@ do_print_deps             = @$(disp_print_deps)
 # Functions
 #
 
-# target-merge-y - expand $1-y, $1-$(TARGET_PLATFORM) and $1-$(TARGET_OS), each variable at
-# most once. keep the body a single line and unindented - a define body is literal text, so a
-# newline or leading space in it becomes part of the value and leaks into every call site.
+# target-merge-y - expand the $(TARGET_ENABLED) variants of $1, each variable at most once.
+# target-merge-n - expand the $(TARGET_DISABLED) variants of $1, plus the bare $1-. the empty
+# suffix cannot live in TARGET_DISABLED, a make word list has no empty words, so it is spelled
+# out here.
+#
+# keep the bodies a single line and unindented - a define body is literal text, so a newline or
+# leading space in it becomes part of the value and leaks into every call site.
 
 define target-merge-y
-$(foreach __S,$(TARGET_SUFFIXES),$($1-$(__S)))
+$(foreach __S,$(TARGET_ENABLED),$($1-$(__S)))
+endef
+define target-merge-n
+$($1-) $(foreach __S,$(TARGET_DISABLED),$($1-$(__S)))
 endef
 
 define target-defaults_base
@@ -1028,41 +1031,33 @@ endef
 # generate target variables
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target)), $(eval $(call target-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.o)), $(eval $(call target.o-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.o-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.o-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.o)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.a)), $(eval $(call target.a-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.a-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.a-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.a)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.so)), $(eval $(call target.so-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.so-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.so-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.so)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.host)), $(eval $(call target.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.host-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.host-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.host)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.o.host)), $(eval $(call target.o.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.o.host-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.o.host-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.o.host)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.so.host)), $(eval $(call target.so.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.so.host-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.so.host-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.so.host)), $(eval $(call target_empty-defaults,$T))))
 
 $(eval $(foreach T, $(sort $(call target-merge-y,target.a.host)), $(eval $(call target.a.host-variables,$T,$(sort $(call target-merge-y,$T_files))))))
-$(eval $(foreach T, $(sort $(target.a.host-n)), $(eval $(call target_empty-defaults,$T))))
-$(eval $(foreach T, $(sort $(target.a.host-)),  $(eval $(call target_empty-defaults,$T))))
+$(eval $(foreach T, $(sort $(call target-merge-n,target.a.host)), $(eval $(call target_empty-defaults,$T))))
 
 # generate subdir targets
 
 $(eval $(foreach S,$(sort $(call target-merge-y,subdir)),$(eval $(call subdir-defaults,$S))))
-$(eval $(foreach S,$(sort $(subdir-y) $(subdir-n) $(subdir-)),$(eval $(call subdir_clean-defaults,$S))))
+$(eval $(foreach S,$(sort $(call target-merge-y,subdir) $(call target-merge-n,subdir)),$(eval $(call subdir_clean-defaults,$S))))
 
 # distributin tags
 
