@@ -836,7 +836,8 @@ endef
 
 define target-defaults-rule
     $(eval source = $(patsubst $3,$4,$(subst __UPDIR__/,../,$2)))
-    $2: ${source} $(MAKEFILE_LIST)
+    $(eval source_depends = $(call target-merge-y,$1_$(source)_depends))
+    $2: $(source) $(if $(filter %.d,$2),$(filter-out __FORCE,$(source_depends)),$(source_depends)) $(MAKEFILE_LIST)
 	$5
 endef
 
