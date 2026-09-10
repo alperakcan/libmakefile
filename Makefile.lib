@@ -71,6 +71,7 @@
 #   20260806 - target_file_depends-y support
 #   20260816 - resolve nested target_depends-y
 #   20260823 - target_var-$(TARGET_PLATFORM), target_var-$(TARGET_OS) support
+#   20260910 - build subdirs before everythingelse
 
 #
 # Example
@@ -1078,11 +1079,25 @@ endif
 
 # generic tags
 
-all: $(addsuffix _all, $(subdirs))
+__subdirs: $(addsuffix _all, $(subdirs))
+__subdirs: __FORCE
+	@true
+
+__targets: $(target-builds)
+__targets: $(target-dists)
+__targets: __FORCE
+	@true
+
+ifeq ($(subdirs),)
 all: $(target-builds)
 all: $(target-dists)
 all: __FORCE
 	@true
+else
+all: __FORCE
+	${Q}+ $(MAKE) __subdirs
+	${Q}+ $(MAKE) __targets
+endif
 
 clean: $(addsuffix _clean, $(subdir-y) $(subdir-n) $(subdir-))
 clean: $(target-cleans)
@@ -1092,6 +1107,18 @@ clean: __FORCE
 __FORCE:
 	@true
 
+target-includes := $(target-depends)
+
+ifneq ($(subdirs),)
+ifeq ($(filter-out all,$(MAKECMDGOALS)),)
+target-includes :=
+endif
+endif
+
+ifneq ($(filter __subdirs,$(MAKECMDGOALS)),)
+target-includes :=
+endif
+
 ifneq "$(MAKECMDGOALS)" "clean"
--include $(target-depends)
+-include $(target-includes)
 endif
